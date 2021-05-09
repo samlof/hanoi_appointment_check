@@ -1,15 +1,16 @@
 import { injectable } from "inversify";
 import { Telegraf } from "telegraf";
+import { utils } from "../utils";
 import { bot_token } from "./bot_token";
 import { BroadcastFileService } from "./broadcastFileService";
 
 const samuli_telegram_id = "72781909";
 
-const bot = new Telegraf(bot_token);
-
 @injectable()
 export class BroadcastServer {
   constructor(private broadcastFileService: BroadcastFileService) {
+    const bot = new Telegraf(bot_token);
+
     bot.start((ctx) => {
       this.addToBroadcastlist(ctx.from.id);
       ctx.reply(
@@ -27,12 +28,18 @@ export class BroadcastServer {
       //this.sendBroadcast(ctx.message.text.replace("/sendbroadcast", "").trim());
     });
 
-    console.log("Starting telegraf bot");
+    console.log(`${utils.getTimestamp()} Starting telegraf bot`);
     bot.launch();
 
     // Enable graceful stop
-    process.once("SIGINT", () => bot.stop("SIGINT"));
-    process.once("SIGTERM", () => bot.stop("SIGTERM"));
+    process.once("SIGINT", () => {
+      console.log("SIGINT to telegraf bot");
+      bot.stop("SIGINT");
+    });
+    process.once("SIGTERM", () => {
+      console.log("SIGTERM to telegraf bot");
+      bot.stop("SIGTERM");
+    });
   }
 
   private removeFromBroadcastlist(userId: string | number): void {

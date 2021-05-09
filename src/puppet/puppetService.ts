@@ -21,7 +21,9 @@ export class PuppetService {
     private telegrafService: TelegrafService,
     private captchaService: CaptchaService,
     private logger: Logger
-  ) {}
+  ) {
+    this.logger.init("PuppetService");
+  }
 
   foundFreeDate = false;
   imagesSent = false;

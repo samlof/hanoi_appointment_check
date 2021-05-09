@@ -1,3 +1,7 @@
+import { format } from "date-fns";
+
+const dateFormat = "[dd.MM.yyyy HH:mm.ss.SSS] ";
+
 export const utils = {
   /** Sleep for milliseconds
    * @param {number} ms
@@ -14,4 +18,6 @@ export const utils = {
   getSeconds: (): number => {
     return Math.floor(Date.now() / 1000);
   },
+
+  getTimestamp: (): string => format(new Date(), dateFormat),
 };

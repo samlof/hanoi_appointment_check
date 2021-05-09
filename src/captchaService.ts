@@ -11,7 +11,10 @@ const inUrl = "https://2captcha.com/in.php";
 const getUrl = "https://2captcha.com/res.php";
 const apiKey = process.env.TWOCAPTCHA_APIKEY;
 if (!apiKey) {
-  throw Error("2captcha apikey missing. Add TWOCAPTCHA_APIKEY env variable");
+  throw Error(
+    utils.getTimestamp() +
+      " 2captcha apikey missing. Add TWOCAPTCHA_APIKEY env variable"
+  );
 }
 
 export const captchaFolder = "captchas/";

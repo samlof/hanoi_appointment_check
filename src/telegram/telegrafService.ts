@@ -1,14 +1,17 @@
 import { injectable } from "inversify";
 import { Telegraf } from "telegraf";
+import { utils } from "../utils";
+import { bot_token } from "./bot_token";
 import { BroadcastFileService } from "./broadcastFileService";
 
 const telegramOff = !!process.env.TELEGRAM_OFF;
-console.log("Telegram bot is " + (telegramOff ? "OFF" : "ON"));
+console.log(
+  utils.getTimestamp() + "Telegram bot is " + (telegramOff ? "OFF" : "ON")
+);
 
-const bot_token = "1493051473:AAFoQbnBS21kcE0iYFymlRfSsgNPLGAOTrU";
 const chat_id = "-1001438199502";
 const samuli_telegram_id = "72781909";
-const log_chat_id = "394309276";
+const log_chat_id = "-1001408943087";
 
 @injectable()
 export class TelegrafService {

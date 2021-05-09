@@ -1,6 +1,6 @@
 import { injectable } from "inversify";
 import { TelegrafService } from "./telegram/telegrafService";
-import { format } from "date-fns";
+import { utils } from "./utils";
 
 @injectable()
 export class Logger {
@@ -17,14 +17,14 @@ export class Logger {
     msg = this.formatMsg(msg);
 
     console.log(msg);
-    this.telegrafService.sendLogMessage(msg);
+    this.sendTelegram(msg);
   }
   public error(msg: string): void {
     msg = "ERROR: " + msg;
     msg = this.formatMsg(msg);
 
     console.error(msg);
-    this.telegrafService.sendLogMessage(msg);
+    this.sendTelegram(msg);
 
     // Send error to my telegram as well
     this.telegrafService.sendMe(msg);
@@ -34,25 +34,35 @@ export class Logger {
     msg = this.formatMsg(msg);
 
     console.info(msg);
-    this.telegrafService.sendLogMessage(msg);
+    this.sendTelegram(msg);
   }
   public debug(msg: string): void {
     msg = "DEBUG: " + msg;
     msg = this.formatMsg(msg);
 
     console.debug(msg);
-    this.telegrafService.sendLogMessage(msg);
+    this.sendTelegram(msg);
   }
 
   private formatMsg(msg: string): string {
-    const timestamp = format(new Date(), dateFormat);
-    msg = timestamp + msg + " ";
     if (this.serviceName) {
       msg = `{${this.serviceName}} ` + msg;
     }
 
+    msg = utils.getTimestamp() + msg + " ";
     return msg;
   }
-}
 
-const dateFormat = "[dd.MM.yyyy HH:mm.ss.SSSS] ";
+  private async sendTelegram(msg: string) {
+    try {
+      await this.telegrafService.sendLogMessage(msg);
+    } catch (error) {
+      console.error(
+        utils.getTimestamp() +
+          "error sending log to telegram: " +
+          JSON.stringify(error)
+      );
+      // ignore error
+    }
+  }
+}

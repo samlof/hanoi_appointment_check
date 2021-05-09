@@ -15,11 +15,10 @@ import {
 import { TelegrafService } from "./telegram/telegrafService";
 import { utils } from "./utils";
 
-const version = require("./package.json").version;
+const version = "0.1.0";
 
 async function main() {
   const logger = container.get(Logger);
-  const telegrafService = container.get(TelegrafService);
 
   logger.log("Running main v" + version);
 
