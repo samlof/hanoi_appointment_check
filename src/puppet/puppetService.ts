@@ -330,7 +330,7 @@ export class PuppetService {
    * @param page Page object that is at applicants page with applicant filled.
    * @returns Error
    */
-  public async checkCalendarDays(page: Page): Promise<AvailableDate[]> {
+  public async CheckCalendarDays(page: Page): Promise<AvailableDate[]> {
     // Keep checking calendar while we are on it's page
 
     if (

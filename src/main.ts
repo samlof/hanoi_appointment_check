@@ -37,13 +37,12 @@ async function checkSeatsCalendar() {
   const puppet = container.get(PuppetService);
 
   logger.log("Running checkSeatsCalendar");
-  // Use as since we will always make this into correct in loop
 
   while (true) {
     const [browser, page] = await puppet.getBrowser();
     try {
       // Make new account
-      logger.log("Making new account for logging it");
+      logger.log("Making new account for logging in");
       const fakePerson = makeFakePerson();
       const seatInfo = {
         Email: fakePerson.Email,
@@ -62,25 +61,28 @@ async function checkSeatsCalendar() {
       // Log in
       await puppet.Login(page, fakePerson.Email, fakePerson.Password);
 
+      // Reusable function to check different categories
       const checkSeatsFunc = async (
         seatCategory: SeatCategory,
         categoryName: string
       ) => {
-        // Check rp familty
+        // Go to final calendar page
         await puppet.GotoCalendarPage(page, seatInfo, seatCategory);
-        const avDates = await puppet.checkCalendarDays(page);
+        const avDates = await puppet.CheckCalendarDays(page);
         logger.log(
-          `Found ${avDates.length} available dates for ${categoryName} category`
+          `Found ${avDates?.length} available dates for ${categoryName} category`
         );
         if (avDates?.length > 0) {
-          telegrafService.sendBroadcast(
-            `${categoryName} found seats: ${avDates.join(
-              ","
-            )}. Go to ${loginPageUrl} to try to reserve a seat`
-          );
+          // Found dates. Send to chat and broadcast
+          const msg = `${categoryName} found seats: ${avDates.join(
+            ","
+          )}. Go to ${loginPageUrl} to try to reserve a seat`;
+          telegrafService.sendBroadcast(msg);
+          telegrafService.sendChat(msg);
         }
       };
 
+      // Run infinite loop checking seats until an exception is thrown
       while (true) {
         await checkSeatsFunc(SeatCategory.RPFamily, "Family");
         await checkSeatsFunc(SeatCategory.RPStudent, "Student");
@@ -89,10 +91,15 @@ async function checkSeatsCalendar() {
         await utils.sleep(30 * 1000);
       }
     } catch (error) {
-      const errMsg = `Got exception while checking seats: ${JSON.stringify(
-        error
-      )} at ${error.stack}`;
-      logger.error(errMsg);
+      const errorJson = JSON.stringify(error);
+      if (errorJson.includes("Invalid url for checking calendar days")) {
+        console.log(
+          `Got url ${page.url()} when expected final calendar. Making new browser and account`
+        );
+      } else {
+        const errMsg = `Got exception while checking seats: ${errorJson} at ${error.stack}`;
+        logger.error(errMsg);
+      }
     } finally {
       browser.close();
     }

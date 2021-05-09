@@ -60,7 +60,7 @@ export class Logger {
       console.error(
         utils.getTimestamp() +
           "error sending log to telegram: " +
-          JSON.stringify(error)
+          JSON.stringify(error, null, 2)
       );
       // ignore error
     }
