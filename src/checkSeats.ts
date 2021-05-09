@@ -1,15 +1,17 @@
 import * as fs from "fs";
 import fetch from "node-fetch";
 import { makeFakePerson } from "./fakerUtils";
-import { myContainer } from "./inversify.config";
+import { container } from "./inversify.config";
 import { PuppetService } from "./puppet/puppetService";
 import { TelegrafService } from "./telegram/telegrafService";
-import * as utils from "./utils";
+import { utils } from "./utils";
 
 const cookieFile = "cookies.txt";
 
+// This is not used currently. Isn't accurate
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function checkSeatsFirstPage(): Promise<void> {
-  const puppet = myContainer.get(PuppetService);
+  const puppet = container.get(PuppetService);
 
   console.log("Running checkSeatsFirstPage");
   let cookies = "";
@@ -19,35 +21,37 @@ async function checkSeatsFirstPage(): Promise<void> {
   } catch (error) {
     // Can ignore error
   }
-  let email = "";
-  let password = "";
   while (true) {
+    // Make new account
     if (!cookies) {
       cookies = "";
       console.log("Making new account");
-      const fakePerson = makeFakePerson();
-      email = fakePerson.Email;
-      password = fakePerson.Password;
+
+      const [browser, page] = await puppet.getBrowser();
       try {
-        const error = await puppet.makeNewAccount(fakePerson);
-        if (error) {
-          console.error("Error making new account: " + error);
-          continue;
-        }
+        // Make new account and log in
+        const fakePerson = makeFakePerson();
+        await puppet.makeNewAccount(page, fakePerson);
+        console.log("Getting page cookies");
+        cookies = await puppet.Login(
+          page,
+          fakePerson.Email,
+          fakePerson.Password
+        );
+        fs.writeFile(cookieFile, cookies, () =>
+          console.log("Wrote new cookies to file")
+        );
       } catch (error) {
         console.error("Error making new account: " + JSON.stringify(error));
         continue;
+      } finally {
+        browser.close();
       }
       await utils.sleep(500);
-
-      console.log("Getting page cookies");
-      cookies = await puppet.getPageCookies(email, password);
-      fs.writeFile(cookieFile, cookies, () =>
-        console.log("Wrote new cookies to file")
-      );
     }
     await utils.sleep(500);
 
+    // Check for seats error on category page
     if (cookies) {
       console.log(`Checking seats`);
       const ret = await checkSeats(cookies);
@@ -65,7 +69,7 @@ async function checkSeatsFirstPage(): Promise<void> {
 
 let seatsAvailableState = false;
 async function checkSeats(cookies: string): Promise<string> {
-  const telegrafService = myContainer.get(TelegrafService);
+  const telegrafService = container.get(TelegrafService);
   try {
     const ret = await fetch(
       "https://online.vfsglobal.com/FinlandAppt/Account/CheckSeatAllotment",

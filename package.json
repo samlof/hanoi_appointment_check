@@ -1,6 +1,6 @@
 {
   "name": "hanoi_appointment",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "",
   "main": "dist/main.js",
   "scripts": {
@@ -15,7 +15,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "console-stamp": "^3.0.2",
+    "date-fns": "^2.21.3",
     "dotenv": "^8.2.0",
     "faker": "^5.5.2",
     "form-data": "^4.0.0",

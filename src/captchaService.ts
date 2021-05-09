@@ -2,9 +2,10 @@ import fs from "fs";
 import fetch from "node-fetch";
 import FormData from "form-data";
 
-import * as utils from "./utils";
+import { utils } from "./utils";
 import { TelegrafService } from "./telegram/telegrafService";
 import { injectable } from "inversify";
+import { Logger } from "./logger";
 
 const inUrl = "https://2captcha.com/in.php";
 const getUrl = "https://2captcha.com/res.php";
@@ -31,7 +32,12 @@ try {
 
 @injectable()
 export class CaptchaService {
-  constructor(private telegrafService: TelegrafService) {}
+  constructor(
+    private telegrafService: TelegrafService,
+    private logger: Logger
+  ) {
+    this.logger.init("CaptchaService");
+  }
 
   public reportBad(captchaId: string, filename: string): Promise<unknown> {
     try {
@@ -51,7 +57,7 @@ export class CaptchaService {
         }
       );
     } catch (error) {
-      console.error("Failed to save badcaptcha: " + JSON.stringify(error));
+      this.logger.error("Failed to save badcaptcha: " + JSON.stringify(error));
     }
     return fetch(`${getUrl}?key=${apiKey}&action=reportbad&id=${captchaId}`, {
       method: "GET",
@@ -83,15 +89,14 @@ export class CaptchaService {
         await utils.sleep(5000);
       }
       if (!text.startsWith("OK|")) {
-        console.log("error sending captcha: " + text);
-        this.telegrafService.sendMe("error sending captcha: " + text);
+        this.logger.error("error sending captcha: " + text);
         return;
       }
 
       const captchaId = text.slice(3);
       await utils.sleep(15 * 1000);
       while (true) {
-        console.log("Captcha Waiting 5 seconds");
+        this.logger.log("Captcha Waiting 5 seconds");
         await utils.sleep(5 * 1000);
         const ret = await fetch(
           `${getUrl}?key=${apiKey}&action=get&id=${captchaId}`,
@@ -101,15 +106,15 @@ export class CaptchaService {
         );
         text = await ret.text();
         if (typeof text != "string") {
-          console.log("Invalid type text: " + text);
-          this.telegrafService.sendMe("Invalid type text: " + text);
+          this.logger.error(
+            "Invalid type return: " + text + " . Type of " + typeof text
+          );
           return;
         }
         if (text === "CAPCHA_NOT_READY") continue;
 
         if (!text.startsWith("OK|")) {
-          console.log("Error happened: " + text);
-          this.telegrafService.sendMe("Error happened: " + text);
+          this.logger.error("Error with receiving captcha: " + text);
           return;
         }
         text = text.slice(3).toUpperCase();
@@ -120,12 +125,8 @@ export class CaptchaService {
         return { answer: text, captchaId: captchaId };
       }
     } catch (error) {
-      console.exception("Getting captcha failed: " + JSON.stringify(error));
-      this.telegrafService.sendMe(
-        "Getting captcha failed: " + JSON.stringify(error)
-      );
+      this.logger.error("Getting captcha failed: " + JSON.stringify(error));
     }
-    return;
   }
 }
 

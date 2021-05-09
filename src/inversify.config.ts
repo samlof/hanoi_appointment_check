@@ -1,9 +1,8 @@
-import "reflect-metadata";
 import { Container } from "inversify";
+import "reflect-metadata";
 
-const myContainer = new Container({
-  defaultScope: "Singleton",
+const container = new Container({
   autoBindInjectable: true,
 });
 
-export { myContainer };
+export { container };

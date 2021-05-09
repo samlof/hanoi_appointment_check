@@ -33,17 +33,13 @@ export class BroadcastServer {
     // Enable graceful stop
     process.once("SIGINT", () => bot.stop("SIGINT"));
     process.once("SIGTERM", () => bot.stop("SIGTERM"));
-
-    this.inited = true;
   }
-
-  private broadcastIds = this.broadcastFileService.readIds;
-  private inited = false;
 
   private removeFromBroadcastlist(userId: string | number): void {
     if (typeof userId === "number") {
       userId = userId.toString();
     }
+    this.broadcastFileService.removeId(userId);
   }
 
   private addToBroadcastlist(userId: string | number): void {

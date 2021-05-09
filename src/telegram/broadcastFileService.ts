@@ -1,13 +1,10 @@
 import * as fs from "fs";
 import { injectable } from "inversify";
-import { Logger } from "../logger";
 
 const broadcastListFile = "userids.txt";
 
 @injectable()
 export class BroadcastFileService {
-  constructor(private logger: Logger) {}
-
   /**
    * Get ids that are registered for broadcasting from file
    * @returns List if telegram ids
@@ -55,8 +52,11 @@ export class BroadcastFileService {
     try {
       fs.writeFileSync(broadcastListFile, ids.join("\n") + "\n");
     } catch (error) {
-      this.logger.error(`Failed to resave broadcast file`);
-      throw error;
+      throw new Error(
+        `Error saving broadcast file with ids ${ids}. Exception: ${JSON.stringify(
+          error
+        )}`
+      );
     }
   }
 }

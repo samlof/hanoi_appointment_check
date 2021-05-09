@@ -1,18 +1,16 @@
+import { injectable } from "inversify";
+import { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer-extra";
-import { Browser, HTTPRequest, HTTPResponse, Page } from "puppeteer";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import { Captcha, captchaFolder, CaptchaService } from "../captchaService";
+import { Country } from "../countries";
+import { Logger } from "../logger";
+import * as options from "../options";
+import { TelegrafService } from "../telegram/telegrafService";
+import { utils } from "../utils";
 puppeteer.use(StealthPlugin());
 
-import * as utils from "../utils";
-import * as options from "../options";
-import { RetError } from "../error";
-import { Country } from "../countries";
-import { Captcha, captchaFolder, CaptchaService } from "../captchaService";
-import { TelegrafService } from "../telegram/telegrafService";
-import { injectable } from "inversify";
-import { Logger } from "../logger";
-
-const loginPageUrl =
+export const loginPageUrl =
   "https://online.vfsglobal.com/FinlandAppt/Account/RegisteredLogin?q=shSA0YnE4pLF9Xzwon/x/FXkgptUe6eKckueax3hilyMCJeF9rpsVy6pNcXQaW1lGwqZ09Q3CAT0LslshZBx5g==";
 const registerPageUrl =
   "https://online.vfsglobal.com/FinlandAppt/Account/RegisterUser";
@@ -33,28 +31,7 @@ export class PuppetService {
    * @param {string} password
    * @returns {Promise<[string]>} cookie string
    */
-  public async getPageCookies(
-    email: string,
-    password: string
-  ): Promise<string> {
-    const [browser, page] = await this.getBrowser();
-    let res = "";
-    try {
-      res = await this.internalGetPageCookies(page, email, password);
-    } catch (error) {
-      this.telegrafService.sendMe(`Exception trying to get cookies: ${error}`);
-    }
-    browser.close();
-
-    return res;
-  }
-
-  /**
-   * @param {string} email
-   * @param {string} password
-   * @returns {Promise<[string]>} cookie string
-   */
-  async internalGetPageCookies(
+  public async Login(
     page: Page,
     email: string,
     password: string
@@ -67,15 +44,10 @@ export class PuppetService {
 
     let captcha: Captcha | undefined;
     for (let i = 0; i < 5 && !captcha; i++) {
-      try {
-        captcha = await this.captchaService.solveCaptcha(filename);
-      } catch (error) {
-        await utils.sleep(500);
-      }
+      captcha = await this.captchaService.solveCaptcha(filename);
     }
     if (!captcha) {
-      this.telegrafService.sendMe("Failed to solve captcha even in 5 tries");
-      return "";
+      throw new Error("Failed to solve captcha even after 5 tries");
     }
 
     // @ts-ignore because it's input
@@ -86,7 +58,7 @@ export class PuppetService {
       (el, password) => (el.value = password),
       password
     );
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(500);
 
     await page.$eval(
       "#CaptchaInputText",
@@ -94,10 +66,10 @@ export class PuppetService {
       (el, captcha) => (el.value = captcha),
       captcha.answer
     );
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(500);
 
     await Promise.all([page.click(".submitbtn"), page.waitForNavigation()]);
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(500);
 
     if (
       page.url().includes("https://online.vfsglobal.com/FinlandAppt/Home/Index")
@@ -132,28 +104,23 @@ export class PuppetService {
       const client = await page.target().createCDPSession();
       await client.send("Network.clearBrowserCookies");
       await client.send("Network.clearBrowserCache");
-      return this.internalGetPageCookies(page, email, password);
+      await client.detach();
+      return this.Login(page, email, password);
     }
     if (errors) {
-      this.telegrafService.sendMe("Failed to login. Error: " + errors);
-      return "";
+      throw new Error("Failed to login. Error: " + errors);
     }
 
     this.telegrafService.sendMe("Failed to login. No error");
     await page.screenshot({ path: "errorLoggingIn.png" });
-    this.telegrafService.sendImageMe("errorLoggingIn.png");
-    return "";
+    this.telegrafService.sendImageMeFileName("errorLoggingIn.png");
+    throw new Error("Failed to login. No error");
   }
 
-  /**
-   * @returns Error
-   */
-  public async makeNewAccount(accountInfo: AccountInfo): Promise<RetError> {
-    const [browser, page] = await this.getBrowser();
-    page.on("dialog", (dialog) => {
-      dialog.accept();
-    });
-
+  public async makeNewAccount(
+    page: Page,
+    accountInfo: AccountInfo
+  ): Promise<void> {
     await page.goto(loginPageUrl);
     await utils.sleep(1000);
 
@@ -211,8 +178,7 @@ export class PuppetService {
       captcha = await this.captchaService.solveCaptcha(filename);
     }
     if (!captcha) {
-      browser.close();
-      return "Failed to get captcha";
+      throw new Error("Failed to get captcha");
     }
 
     await page.$eval(
@@ -222,11 +188,19 @@ export class PuppetService {
       captcha.answer
     );
 
+    // Submit will open a dialog. Accept it
+    const diabloAccepter = (dialog: any) => {
+      dialog.accept();
+    };
+    page.on("dialog", diabloAccepter);
+
     await page.waitForTimeout(500);
     await Promise.all([
       await page.click(`input[type="submit"]`),
       page.waitForNavigation(),
     ]);
+    // Remove dialog accepter.
+    page.off("dialog", diabloAccepter);
     await page.waitForTimeout(500);
 
     if (page.url().includes(registerPageUrl)) {
@@ -242,19 +216,18 @@ export class PuppetService {
       }
       if (errors?.includes("Invalid reCAPTCHA request")) {
         this.captchaService.reportBad(captcha.captchaId, filename);
-        browser.close();
         await utils.sleep(1000);
-        return this.makeNewAccount(accountInfo);
+        await this.makeNewAccount(page, accountInfo);
+        return;
       }
       if (!errors) {
         await page.screenshot({ path: "register_unknown_error.png" });
-        this.telegrafService.sendImageMe("register_unknown_error.png");
+        this.telegrafService.sendImageMeFileName("register_unknown_error.png");
       }
       this.telegrafService.sendMe(
         "Failed to create account. Error happened: " + errors
       );
-      await browser.close();
-      return "Didn't move to next page. Error happened";
+      throw new Error("Didn't move to next page. Error happened");
     }
 
     // Navigated to correct page. Check if registered message is there
@@ -269,8 +242,7 @@ export class PuppetService {
       ) {
         // Something went wrong. Probably captcha
         this.telegrafService.sendMe(`Failed to create account. Unknown error`);
-        browser.close();
-        return "Error happened";
+        throw new Error("Error happened");
       }
     } catch (error) {
       const errmsg =
@@ -279,47 +251,37 @@ export class PuppetService {
       this.logger.error(errmsg);
       this.telegrafService.sendMe(errmsg);
       await page.screenshot({ path: "SubContainer_error.png" });
-      browser.close();
-      return "Error finding SubContainer";
+      throw new Error("Error finding SubContainer");
     }
 
     // Login succeeded
     this.captchaService.reportGood(captcha.captchaId);
-    browser.close();
-    return "";
   }
 
+  private readonly loginHomePageUrl =
+    "https://online.vfsglobal.com/FinlandAppt/Home/Index";
   /**
    * @returns Error
    */
-  public async ReserveSeat(
-    email: string,
-    password: string,
-    info: ApplicantInfo
-  ): Promise<RetError> {
-    const [browser, page] = await this.getBrowser();
-    const cookies = await this.internalGetPageCookies(page, email, password);
-    if (!cookies) {
-      // Error happened.
-      browser.close();
-      return "Couldn't log in";
+  public async GotoCalendarPage(
+    page: Page,
+    info: ApplicantInfo,
+    seatCategory: SeatCategory
+  ): Promise<void> {
+    if (page.url() !== this.loginHomePageUrl) {
+      await page.goto(this.loginHomePageUrl);
+    }
+    if (page.url() !== this.loginHomePageUrl) {
+      throw new Error("GotoCalendarPage: cannot get to home page");
     }
 
-    await page.waitForTimeout(2000);
-
-    if (page.url() !== "https://online.vfsglobal.com/FinlandAppt/Home/Index") {
-      // We are at wrong url. Error
-      this.logger.error("ReserveSeat: wrong url after logging in.");
-      browser.close();
-      return "ReserveSeat: wrong url after logging in.";
-    }
     const linkHandlers = await page.$x(
       "//a[contains(text(), 'Schedule Appointment')]"
     );
     if (linkHandlers.length === 0) {
-      this.logger.error("Link for Schedule Appointment not found");
-      browser.close();
-      return "ReserveSeat: wrong url after logging in.";
+      throw new Error(
+        "GotoCalendarPage: Cannot find link for scheduling appointment"
+      );
     }
 
     await Promise.all([page.waitForNavigation(), linkHandlers[0].click()]);
@@ -329,11 +291,11 @@ export class PuppetService {
     await page.waitForTimeout(500);
 
     // const _locError = await page.$eval("#LocationError", (el) => el.textContent);
-    // No need to check seats yet
+    // No need to check seats error
     // if (locError?.includes("There are no open seats")) {
-    //   return "no open seats";
+    //   throw new Error( "no open seats");
     // }
-    await page.select("#VisaCategoryId", SeatCategory.RPFamily);
+    await page.select("#VisaCategoryId", seatCategory);
     await page.waitForTimeout(500);
 
     // Debug code to bypass no seats available
@@ -354,15 +316,11 @@ export class PuppetService {
 
     await this.FillApplicantForm(page, info);
 
-    try {
-      const res = await this.checkRequestDatesLoop(page);
-
-      return res;
-    } catch (error) {
-      return "Got error: " + JSON.stringify(error) + " at: " + error.stack;
-    } finally {
-      await browser.close();
-    }
+    // Go to calendar page
+    await Promise.all([
+      page.waitForNavigation(),
+      page.click("input[type='submit']"),
+    ]);
   }
 
   /**
@@ -370,132 +328,33 @@ export class PuppetService {
    * @param page Page object that is at applicants page with applicant filled.
    * @returns Error
    */
-  async checkRequestDatesLoop(page: Page): Promise<RetError> {
-    let imagesSaved = false;
-
-    // Setup checking ajax calls responses
-    await page.setRequestInterception(true);
-
-    const responseChecker = async (response: HTTPResponse) => {
-      // Only interested in CalendarDays calls
-      if (
-        !response
-          .url()
-          .startsWith(
-            "https://online.vfsglobal.com/FinlandAppt/Calendar/GetCalendarDaysOnViewChange"
-          )
-      ) {
-        return;
-      }
-
-      if (!response.ok()) return;
-
-      try {
-        this.logger.log(`foundFreeDate is ${this.foundFreeDate}.`);
-        const resJson = await response.json();
-        const dates: any[] = JSON.parse(resJson.CalendarDatesOnViewChange);
-        this.logger.log(`Found ${dates.length} entries in ajax`);
-        const availableDates = dates.filter(
-          (x) => !x.IsHoliday && !x.IsWeekend
-        );
-        if (availableDates.length === 0) {
-          if (this.foundFreeDate) {
-            // const msg = "Seats stopped being available";
-            // telegrafService.sendChat(msg);
-            // telegrafService.sendBroadcast(msg);
-            // foundFreeDate = false;
-          }
-          // imagesSent = false;
-          this.logger.log("No available dates in calendar json");
-          return;
-        }
-        // We have available dates!
-        const debugInfo = JSON.stringify(availableDates);
-        this.logger.log(`Found available dates! ${debugInfo}`);
-        if (this.foundFreeDate) return;
-
-        this.telegrafService.sendMe("Dates: " + debugInfo);
-        const msg = `Available dates found in calendar. Visit https://online.vfsglobal.com/FinlandAppt/Account/RegisteredLogin?q=shSA0YnE4pLF9Xzwon/x/FXkgptUe6eKckueax3hilyMCJeF9rpsVy6pNcXQaW1lGwqZ09Q3CAT0LslshZBx5g== to try to reserve a place`;
-        this.telegrafService.sendChat(msg);
-        this.telegrafService.sendBroadcast(msg);
-        this.foundFreeDate = true;
-        for (let i = 0; i < 5 && !imagesSaved; i++) {
-          await utils.sleep(2000);
-        }
-        if (!imagesSaved) {
-          this.logger.log("No new images even after waiting 10 seconds");
-          return;
-        }
-        if (!this.imagesSent) {
-          await this.telegrafService.sendImageChat("calendar1.png");
-          await this.telegrafService.sendImageChat("calendar2.png");
-          this.imagesSent = true;
-        }
-      } catch (error) {
-        const msg = `Error intercepting calendar days message: ${JSON.stringify(
-          error
-        )}`;
-        this.logger.error(msg);
-        this.telegrafService.sendMe(msg);
-      }
-    };
-    const requestContinuerer = (interceptedRequest: HTTPRequest) => {
-      interceptedRequest.continue();
-    };
-    page.on("request", requestContinuerer);
-    page.on("response", responseChecker);
-
-    // We are at Applicant list page. Click Continue to get to seat reservation
-    try {
-      await Promise.all([
-        page.waitForNavigation(),
-        page.click("input[type='submit']"),
-      ]);
-    } catch (error) {
-      this.logger.error(
-        "Error going to calendar page: " + JSON.stringify(error)
-      );
-      throw error;
-    }
-
+  public async checkCalendarDays(page: Page): Promise<AvailableDate[]> {
     // Keep checking calendar while we are on it's page
-    while (
-      page.url() ===
+
+    if (
+      page.url() !==
       "https://online.vfsglobal.com/FinlandAppt/Calendar/FinalCalendar"
     ) {
-      try {
-        await page.waitForSelector("#calendar", { timeout: 5000 });
-      } catch (error) {
-        // Ignore timeout error
-      }
-      await page.waitForTimeout(3 * 1000);
-      //await page.waitForTimeout(* 1000);
-
-      await this.checkCalendarPage(page, "calendar1.png");
-
-      await page.click(".fc-header-right .fc-button");
-      await page.waitForTimeout(3 * 1000);
-
-      await this.checkCalendarPage(page, "calendar2.png");
-
-      imagesSaved = true;
-      await page.waitForTimeout(40 * 1000);
-      imagesSaved = false;
-
-      await page.reload({ waitUntil: "networkidle2" });
+      throw new Error("Invalid url for checking calendar days");
     }
 
-    await page.waitForTimeout(1 * 1000);
-    this.logger.log("Removing request listeners");
-    // Remove intercepting requests
-    await page.setRequestInterception(false);
-    page.removeAllListeners("request");
-    page.removeAllListeners("response");
+    const ret: AvailableDate[] = [];
+    let avdays = await this.checkCalendarPage(page, "calendar1.png");
+    if (avdays) ret.push(...avdays);
 
-    return ErrSessionExpired;
+    await page.click(".fc-header-right .fc-button");
+    await page.waitForTimeout(3 * 1000);
+
+    avdays = await this.checkCalendarPage(page, "calendar2.png");
+    if (avdays) ret.push(...avdays);
+
+    return ret;
   }
 
-  async checkCalendarPage(page: Page, filename: string): Promise<void> {
+  private async checkCalendarPage(
+    page: Page,
+    filename: string
+  ): Promise<AvailableDate[] | undefined> {
     const calendarEl = await page.$("#calendar");
     await calendarEl?.screenshot({ path: filename });
     await page.waitForTimeout(500);
@@ -525,10 +384,7 @@ export class PuppetService {
 
     // No interesting days on calendar
     if (backgroundStyles.length === 0) {
-      // imagesSent = false;
-      // foundFreeDate = false;
-      this.logger.log("No dates free on calendar page");
-      return;
+      return undefined;
     }
 
     // Available dates should be 188, 237, 145. Any other are unknown
@@ -541,8 +397,8 @@ export class PuppetService {
         JSON.stringify(unknownColor, null, 2);
       this.telegrafService.sendMe(msg);
       this.logger.log(msg);
-      await page.screenshot({ path: "unknown_color.png" });
-      await this.telegrafService.sendImageMe("unknown_color.png");
+      const errImg = await page.screenshot();
+      if (errImg) this.telegrafService.sendImageMe(errImg);
     }
 
     // Filter for only green dates
@@ -550,23 +406,13 @@ export class PuppetService {
       (x) => x.bg === "rgb(188, 237, 145)"
     );
     if (backgroundStyles.length === 0) {
-      // imagesSent = false;
-      // foundFreeDate = false;
-      return;
+      return undefined;
     }
-    const msg =
-      "Found available dates: " + backgroundStyles.map((x) => x.date).join(",");
-    this.logger.log(msg);
 
-    if (!this.foundFreeDate) {
-      this.telegrafService.sendChat(msg);
-      this.foundFreeDate = true;
-    }
-    if (!this.imagesSent) {
-      await this.telegrafService.sendImageChat("calendar1.png");
-      await this.telegrafService.sendImageChat("calendar2.png");
-      this.imagesSent = true;
-    }
+    // Return the available dates
+    return backgroundStyles.map((x) => ({
+      date: x.date,
+    }));
   }
 
   async FillApplicantForm(page: Page, info: ApplicantInfo): Promise<void> {
@@ -644,7 +490,7 @@ export class PuppetService {
    * Can only have one browser open at a time with this call.
    * @returns puppeteer browser and page
    */
-  async getBrowser(
+  public async getBrowser(
     datadir: string | undefined = undefined
   ): Promise<[Browser, Page]> {
     const browser = await puppeteer.launch({
@@ -701,4 +547,6 @@ export enum Gender {
   Others = "3",
 }
 
-const ErrSessionExpired: RetError = "Invalid url. Need login again";
+interface AvailableDate {
+  date: string;
+}

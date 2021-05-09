@@ -8,6 +8,7 @@ console.log("Telegram bot is " + (telegramOff ? "OFF" : "ON"));
 const bot_token = "1493051473:AAFoQbnBS21kcE0iYFymlRfSsgNPLGAOTrU";
 const chat_id = "-1001438199502";
 const samuli_telegram_id = "72781909";
+const log_chat_id = "394309276";
 
 @injectable()
 export class TelegrafService {
@@ -25,9 +26,20 @@ export class TelegrafService {
     this.bot.telegram.sendMessage(chat_id, msg);
   }
 
-  public async sendImageMe(photoFile: string): Promise<void> {
+  public async sendImageMeFileName(photoFile: string): Promise<void> {
     await this.bot.telegram.sendPhoto(samuli_telegram_id, {
       source: photoFile,
+    });
+  }
+  public async sendImageMe(buffer: string | Buffer): Promise<void> {
+    if (typeof buffer === "string") {
+      await this.bot.telegram.sendPhoto(samuli_telegram_id, {
+        source: buffer,
+      });
+      return;
+    }
+    await this.bot.telegram.sendPhoto(samuli_telegram_id, {
+      source: buffer,
     });
   }
 
@@ -40,6 +52,7 @@ export class TelegrafService {
   }
 
   public async sendBroadcast(msg: string): Promise<void> {
+    if (telegramOff) return;
     for (const id of this.broadcastFileService.readIds()) {
       await this.bot.telegram.sendMessage(id, msg);
     }
@@ -57,5 +70,9 @@ export class TelegrafService {
     for (const id of this.broadcastFileService.readIds()) {
       await this.bot.telegram.sendPhoto(id, fileId);
     }
+  }
+
+  public async sendLogMessage(msg: string): Promise<void> {
+    await this.bot.telegram.sendMessage(log_chat_id, msg);
   }
 }

@@ -1,23 +1,27 @@
 import dotenv from "dotenv";
 dotenv.config();
-
 import faker from "faker";
 import passwordGen from "secure-random-password";
 import { Country } from "./countries";
-import { myContainer } from "./inversify.config";
-import { ApplicantInfo, Gender, PuppetService } from "./puppet/puppetService";
+import { container } from "./inversify.config";
+import { Logger } from "./logger";
+import {
+  ApplicantInfo,
+  Gender,
+  loginPageUrl,
+  PuppetService,
+  SeatCategory,
+} from "./puppet/puppetService";
 import { TelegrafService } from "./telegram/telegrafService";
+import { utils } from "./utils";
 
 const version = require("./package.json").version;
 
-// Add more listeners. Puppeteer uses a lot and might be slow at closing
-process.setMaxListeners(20);
-
 async function main() {
-  const telegrafService = myContainer.get(TelegrafService);
+  const logger = container.get(Logger);
+  const telegrafService = container.get(TelegrafService);
 
-  const msg = "Running main v" + version;
-  console.log(msg);
+  logger.log("Running main v" + version);
 
   try {
     await checkSeatsCalendar();
@@ -25,24 +29,24 @@ async function main() {
     const msg = `Error while checking seats: ${JSON.stringify(error)} at ${
       error.stack
     }`;
-    telegrafService.sendMe(msg);
-    console.error(msg);
+    logger.error(msg);
   }
 }
 async function checkSeatsCalendar() {
-  const telegrafService = myContainer.get(TelegrafService);
-  const puppet = myContainer.get(PuppetService);
+  const logger = container.get(Logger);
+  const telegrafService = container.get(TelegrafService);
+  const puppet = container.get(PuppetService);
 
-  console.log("Running checkSeatsCalendar");
-  let fakePerson = makeFakePerson();
+  logger.log("Running checkSeatsCalendar");
   // Use as since we will always make this into correct in loop
-  let seatInfo: ApplicantInfo = {} as ApplicantInfo;
-  let remakeInfo = true;
+
   while (true) {
-    if (remakeInfo) {
-      console.log("Making new account for logging it");
-      fakePerson = makeFakePerson();
-      seatInfo = {
+    const [browser, page] = await puppet.getBrowser();
+    try {
+      // Make new account
+      logger.log("Making new account for logging it");
+      const fakePerson = makeFakePerson();
+      const seatInfo = {
         Email: fakePerson.Email,
         ContactNumber: faker.phone.phoneNumber("#########"),
         PassportExpirt: "11/04/2025",
@@ -54,34 +58,44 @@ async function checkSeatsCalendar() {
         Gender: Gender.Male,
         Nationality: Country.VIETNAM,
       };
-      const error = await puppet.makeNewAccount(fakePerson);
-      if (error) {
-        console.error("Error making new account: " + error);
-        continue;
-      }
-      remakeInfo = false;
-    }
-    try {
-      console.log("Starting check seats loop");
-      const error = await puppet.ReserveSeat(
-        fakePerson.Email,
-        fakePerson.Password,
-        seatInfo
-      );
-      if (error) {
-        if (!error.includes("Need login again")) {
-          console.error("Error reserving setas: " + error);
+      await puppet.makeNewAccount(page, fakePerson);
+
+      // Log in
+      await puppet.Login(page, fakePerson.Email, fakePerson.Password);
+
+      const checkSeatsFunc = async (
+        seatCategory: SeatCategory,
+        categoryName: string
+      ) => {
+        // Check rp familty
+        await puppet.GotoCalendarPage(page, seatInfo, seatCategory);
+        const avDates = await puppet.checkCalendarDays(page);
+        logger.log(
+          `Found ${avDates.length} available dates for ${categoryName} category`
+        );
+        if (avDates?.length > 0) {
+          telegrafService.sendBroadcast(
+            `${categoryName} found seats: ${avDates.join(
+              ","
+            )}. Go to ${loginPageUrl} to try to reserve a seat`
+          );
         }
-        remakeInfo = true;
+      };
+
+      while (true) {
+        await checkSeatsFunc(SeatCategory.RPFamily, "Family");
+        await checkSeatsFunc(SeatCategory.RPStudent, "Student");
+        await checkSeatsFunc(SeatCategory.RPWork, "Work");
+
+        await utils.sleep(30 * 1000);
       }
     } catch (error) {
-      remakeInfo = true;
-      telegrafService.sendMe(
-        "Got exception from reserve seat: " +
-          JSON.stringify(error) +
-          " at " +
-          error.stack
-      );
+      const errMsg = `Got exception while checking seats: ${JSON.stringify(
+        error
+      )} at ${error.stack}`;
+      logger.error(errMsg);
+    } finally {
+      browser.close();
     }
   }
 }
@@ -109,18 +123,18 @@ function makeFakePerson() {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function makeAccount(
   consoleLog = false
 ): Promise<[string, string] | undefined> {
-  const puppet = myContainer.get(PuppetService);
+  const puppet = container.get(PuppetService);
   const fakePerson = makeFakePerson();
   const email = fakePerson.Email;
   const password = fakePerson.Password;
-  const error = await puppet.makeNewAccount(fakePerson);
-  if (error) {
-    console.error(error);
-    return;
-  }
+
+  const [, page] = await puppet.getBrowser();
+  await puppet.makeNewAccount(page, fakePerson);
+
   if (consoleLog) {
     console.log(email);
     console.log(password);
@@ -129,14 +143,16 @@ async function makeAccount(
 }
 
 async function reserveTesting() {
-  const puppet = myContainer.get(PuppetService);
+  const puppet = container.get(PuppetService);
   // "Gardner12@gmail.com","UW%s4cjLVeP",
   // "steve@protonmail.com", "rY#Ks#$r95H6dyn",
   // "Faustino_Mann@yahoo.com", "wjPe$g7?Xax",
   // await makeAccount(true);
   //telegrafService.sendImageChat("calendar1.png");
 
-  puppet.ReserveSeat("steve@protonmail.com", "rY#Ks#$r95H6dyn", {
+  const [, page] = await puppet.getBrowser();
+
+  const info: ApplicantInfo = {
     Email: "Gardner12@gmail.com",
     ContactNumber: "123125123",
     PassportExpirt: "05/02/2022",
@@ -147,7 +163,9 @@ async function reserveTesting() {
     DialCode: "+84",
     Gender: Gender.Male,
     Nationality: Country.VIETNAM,
-  });
+  };
+  await puppet.Login(page, "steve@protonmail.com", "rY#Ks#$r95H6dyn");
+  await puppet.GotoCalendarPage(page, info, SeatCategory.RPStudent);
 }
 
 if (!process.env.TEST_ENV) {
