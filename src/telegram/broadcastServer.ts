@@ -1,3 +1,5 @@
+// Logger depends on this so can't use here
+/* eslint-disable no-console */
 import { injectable } from "inversify";
 import { Telegraf } from "telegraf";
 import { utils } from "../utils";

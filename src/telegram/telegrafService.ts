@@ -5,6 +5,7 @@ import { bot_token } from "./bot_token";
 import { BroadcastFileService } from "./broadcastFileService";
 
 const telegramOff = !!process.env.TELEGRAM_OFF;
+// eslint-disable-next-line no-console
 console.log(
   utils.getTimestamp() + "Telegram bot is " + (telegramOff ? "OFF" : "ON")
 );
@@ -76,6 +77,7 @@ export class TelegrafService {
   }
 
   public async sendLogMessage(msg: string): Promise<void> {
+    if (telegramOff) return;
     await this.bot.telegram.sendMessage(log_chat_id, msg);
   }
 }

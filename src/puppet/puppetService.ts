@@ -512,7 +512,7 @@ export class PuppetService {
   }
 }
 
-interface AccountInfo {
+export interface AccountInfo {
   FirstName: string;
   LastName: string;
   Email: string;

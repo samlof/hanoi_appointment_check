@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 import * as fs from "fs";
 import fetch from "node-fetch";
 import { makeFakePerson } from "./fakerUtils";

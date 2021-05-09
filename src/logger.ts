@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 import { injectable } from "inversify";
 import { TelegrafService } from "./telegram/telegrafService";
 import { utils } from "./utils";
@@ -62,7 +64,6 @@ export class Logger {
           "error sending log to telegram: " +
           JSON.stringify(error, null, 2)
       );
-      // ignore error
     }
   }
 }

@@ -1,5 +1,8 @@
+import { utils } from "./utils";
+
 const headless = !process.env.PUPPETEER_HEAD;
-console.log("Puppeteer options headless: " + headless);
+// eslint-disable-next-line no-console
+console.log(utils.getTimestamp() + "Puppeteer options headless: " + headless);
 
 export const puppeteer = {
   headless: headless,

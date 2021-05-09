@@ -1,7 +1,8 @@
 import faker from "faker";
 import passwordGen from "secure-random-password";
+import { AccountInfo } from "./puppet/puppetService";
 
-export function makeFakePerson() {
+export function makeFakePerson(): AccountInfo {
   const fname = faker.name.firstName();
   const lname = faker.name.lastName();
   const email = faker.internet.email(fname, lname);

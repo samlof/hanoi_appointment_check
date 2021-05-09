@@ -93,8 +93,12 @@ async function checkSeatsCalendar() {
     } catch (error) {
       const errorJson = JSON.stringify(error);
       if (errorJson.includes("Invalid url for checking calendar days")) {
-        console.log(
+        logger.log(
           `Got url ${page.url()} when expected final calendar. Making new browser and account`
+        );
+      } else if (errorJson.includes("TimeoutError")) {
+        logger.log(
+          `Got timetout error checking seats:  ${errorJson} at ${error.stack}`
         );
       } else {
         const errMsg = `Got exception while checking seats: ${errorJson} at ${error.stack}`;
@@ -130,9 +134,7 @@ function makeFakePerson() {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function makeAccount(
-  consoleLog = false
-): Promise<[string, string] | undefined> {
+async function makeAccount(): Promise<[string, string] | undefined> {
   const puppet = container.get(PuppetService);
   const fakePerson = makeFakePerson();
   const email = fakePerson.Email;
@@ -141,10 +143,10 @@ async function makeAccount(
   const [, page] = await puppet.getBrowser();
   await puppet.makeNewAccount(page, fakePerson);
 
-  if (consoleLog) {
-    console.log(email);
-    console.log(password);
-  }
+  const logger = container.get(Logger);
+  logger.log(email);
+  logger.log(password);
+
   return [email, password];
 }
 
@@ -175,10 +177,12 @@ async function reserveTesting() {
 }
 
 if (!process.env.TEST_ENV) {
-  console.log("Starting in server mode. Running main");
+  // eslint-disable-next-line no-console
+  console.log(utils.getTimestamp() + "Starting in server mode. Running main");
   main();
 } else {
-  console.log("Starting in test mode");
+  // eslint-disable-next-line no-console
+  console.log(utils.getTimestamp() + "Starting in test mode");
 
   reserveTesting();
 }
