@@ -71,18 +71,22 @@ async function checkSeatsCalendar() {
         await puppet.GotoCalendarPage(page, seatInfo, seatCategory);
         const avDates = await puppet.CheckCalendarDays(page);
         logger.log(
-          `Found ${avDates?.length} available dates for ${categoryName} category`
+          `Found ${avDates?.dates.length} available dates for ${categoryName} category`
         );
-        if (avDates?.length > 0) {
+        if (avDates?.dates.length > 0) {
           if (foundFreeDate[categoryName]) return;
           foundFreeDate[categoryName] = true;
 
           // Found dates. Send to chat and broadcast
-          const msg = `${categoryName} found seats: ${avDates
-            .map((d) => d.date)
-            .join(",")}. Go to ${loginPageUrl} to try to reserve a seat`;
-          telegrafService.sendChat(msg);
+          const msg = `${categoryName} found seats: ${avDates.dates.join(
+            ","
+          )}. Go to ${loginPageUrl} to try to reserve a seat`;
+          await telegrafService.sendChat(msg);
           await telegrafService.sendBroadcast(msg);
+
+          for (const image of avDates.images) {
+            if (image) await telegrafService.sendImageChat(image);
+          }
         } else {
           if (!foundFreeDate[categoryName]) return;
           foundFreeDate[categoryName] = false;

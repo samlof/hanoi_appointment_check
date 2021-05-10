@@ -24,10 +24,10 @@ export class TelegrafService {
   public sendMe(msg: string): void {
     this.bot.telegram.sendMessage(samuli_telegram_id, msg);
   }
-  public sendChat(msg: string): void {
+  public async sendChat(msg: string): Promise<void> {
     if (telegramOff) return;
 
-    this.bot.telegram.sendMessage(chat_id, msg);
+    await this.bot.telegram.sendMessage(chat_id, msg);
   }
 
   public async sendImageMeFileName(photoFile: string): Promise<void> {
@@ -46,7 +46,10 @@ export class TelegrafService {
       source: buffer,
     });
   }
+
   public async sendImageLog(buffer: string | Buffer): Promise<void> {
+    if (telegramOff) return;
+
     if (typeof buffer === "string") {
       await this.bot.telegram.sendPhoto(log_chat_id, {
         source: buffer,
@@ -58,7 +61,7 @@ export class TelegrafService {
     });
   }
 
-  public async sendImageChat(photoFile: string): Promise<void> {
+  public async sendImageChatFile(photoFile: string): Promise<void> {
     if (telegramOff) return;
 
     await this.bot.telegram.sendPhoto(chat_id, {
@@ -66,8 +69,23 @@ export class TelegrafService {
     });
   }
 
+  public async sendImageChat(buffer: string | Buffer): Promise<void> {
+    if (telegramOff) return;
+
+    if (typeof buffer === "string") {
+      await this.bot.telegram.sendPhoto(log_chat_id, {
+        source: buffer,
+      });
+      return;
+    }
+    await this.bot.telegram.sendPhoto(log_chat_id, {
+      source: buffer,
+    });
+  }
+
   public async sendBroadcast(msg: string): Promise<void> {
     if (telegramOff) return;
+
     for (const id of this.broadcastFileService.readIds()) {
       try {
         await this.bot.telegram.sendMessage(id, msg);
@@ -108,6 +126,7 @@ export class TelegrafService {
 
   public async sendLogMessage(msg: string): Promise<void> {
     if (telegramOff) return;
+
     await this.bot.telegram.sendMessage(log_chat_id, msg);
   }
 }

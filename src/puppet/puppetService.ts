@@ -336,7 +336,7 @@ export class PuppetService {
    * @param page Page object that is at applicants page with applicant filled.
    * @returns Error
    */
-  public async CheckCalendarDays(page: Page): Promise<AvailableDate[]> {
+  public async CheckCalendarDays(page: Page): Promise<AvailablyDaysResult> {
     // Keep checking calendar while we are on it's page
 
     if (
@@ -346,31 +346,44 @@ export class PuppetService {
       throw new Error("Invalid url for checking calendar days");
     }
 
-    const ret: AvailableDate[] = [];
-    let avdays = await this.checkCalendarPage(page, "calendar1.png");
-    if (avdays) ret.push(...avdays);
+    const ret: AvailablyDaysResult = { dates: [], images: [] };
+    let avdays = await this.checkCalendarPage(page);
+    if (avdays) {
+      ret.dates.push(...avdays);
+
+      const calendarEl = await page.$("#calendar");
+      const calendarPic = await calendarEl?.screenshot();
+      ret.images.push(calendarPic);
+    }
 
     await page.click(".fc-header-right .fc-button");
     await page.waitForTimeout(3 * 1000);
 
-    avdays = await this.checkCalendarPage(page, "calendar2.png");
-    if (avdays) ret.push(...avdays);
+    avdays = await this.checkCalendarPage(page);
+    if (avdays) {
+      ret.dates.push(...avdays);
+
+      const calendarEl = await page.$("#calendar");
+      const calendarPic = await calendarEl?.screenshot();
+      ret.images.push(calendarPic);
+    }
 
     await page.click(".fc-header-right .fc-button");
     await page.waitForTimeout(3 * 1000);
 
-    avdays = await this.checkCalendarPage(page, "calendar3.png");
-    if (avdays) ret.push(...avdays);
+    avdays = await this.checkCalendarPage(page);
+    if (avdays) {
+      ret.dates.push(...avdays);
+
+      const calendarEl = await page.$("#calendar");
+      const calendarPic = await calendarEl?.screenshot();
+      ret.images.push(calendarPic);
+    }
 
     return ret;
   }
 
-  private async checkCalendarPage(
-    page: Page,
-    filename: string
-  ): Promise<AvailableDate[] | undefined> {
-    const calendarEl = await page.$("#calendar");
-    await calendarEl?.screenshot({ path: filename });
+  private async checkCalendarPage(page: Page): Promise<string[] | undefined> {
     await page.waitForTimeout(500);
 
     let backgroundStyles = await page.$$eval("td.fc-day", (ell) =>
@@ -424,9 +437,7 @@ export class PuppetService {
     }
 
     // Return the available dates
-    return backgroundStyles.map((x) => ({
-      date: x.date,
-    }));
+    return backgroundStyles.map((x) => x.date);
   }
 
   async FillApplicantForm(page: Page, info: ApplicantInfo): Promise<void> {
@@ -555,6 +566,7 @@ export enum Gender {
   Others = "3",
 }
 
-interface AvailableDate {
-  date: string;
+interface AvailablyDaysResult {
+  dates: string[];
+  images: (string | void | Buffer | undefined)[];
 }
