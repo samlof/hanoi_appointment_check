@@ -1,6 +1,9 @@
 import { injectable } from "inversify";
 import { Browser, Page } from "puppeteer";
 import puppeteer from "puppeteer-extra";
+import Adblocker from "puppeteer-extra-plugin-adblocker";
+// @ts-ignore this doesn't have types
+import AnonymizeUaPlugin from "puppeteer-extra-plugin-anonymize-ua";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { Captcha, captchaFolder, CaptchaService } from "../captchaService";
 import { Country } from "../countries";
@@ -8,7 +11,10 @@ import { Logger } from "../logger";
 import * as options from "../options";
 import { TelegrafService } from "../telegram/telegrafService";
 import { utils } from "../utils";
+
 puppeteer.use(StealthPlugin());
+puppeteer.use(Adblocker({ blockTrackers: true }));
+puppeteer.use(AnonymizeUaPlugin());
 
 export const loginPageUrl =
   "https://online.vfsglobal.com/FinlandAppt/Account/RegisteredLogin?q=shSA0YnE4pLF9Xzwon/x/FXkgptUe6eKckueax3hilyMCJeF9rpsVy6pNcXQaW1lGwqZ09Q3CAT0LslshZBx5g==";

@@ -61,6 +61,7 @@ async function checkSeatsCalendar() {
       // Log in
       await puppet.Login(page, fakePerson.Email, fakePerson.Password);
 
+      const foundFreeDate: { [key: string]: boolean } = {};
       // Reusable function to check different categories
       const checkSeatsFunc = async (
         seatCategory: SeatCategory,
@@ -73,12 +74,23 @@ async function checkSeatsCalendar() {
           `Found ${avDates?.length} available dates for ${categoryName} category`
         );
         if (avDates?.length > 0) {
+          if (foundFreeDate[categoryName]) return;
+          foundFreeDate[categoryName] = true;
+
           // Found dates. Send to chat and broadcast
           const msg = `${categoryName} found seats: ${avDates
             .map((d) => d.date)
             .join(",")}. Go to ${loginPageUrl} to try to reserve a seat`;
           telegrafService.sendChat(msg);
-          telegrafService.sendBroadcast(msg);
+          await telegrafService.sendBroadcast(msg);
+        } else {
+          if (!foundFreeDate[categoryName]) return;
+          foundFreeDate[categoryName] = false;
+
+          // No seats available. Send a message telling that
+          const msg = `${categoryName} seats stopped being available`;
+          telegrafService.sendChat(msg);
+          await telegrafService.sendBroadcast(msg);
         }
       };
 
@@ -86,9 +98,9 @@ async function checkSeatsCalendar() {
       let timeoutErrors = 0;
       while (true) {
         try {
-          await checkSeatsFunc(SeatCategory.RPFamily, "Family");
-          await checkSeatsFunc(SeatCategory.RPStudent, "Student");
-          await checkSeatsFunc(SeatCategory.RPWork, "Work");
+          await checkSeatsFunc(SeatCategory.RPFamily, "FAMILY");
+          await checkSeatsFunc(SeatCategory.RPStudent, "STUDENT");
+          await checkSeatsFunc(SeatCategory.RPWork, "WORK");
         } catch (error) {
           // Check for timeout error. In that case retry the loop
           const errorJson = JSON.stringify(error);
@@ -148,7 +160,10 @@ async function checkSeatsCalendar() {
         if (sc) telegrafService.sendImageMe(sc);
       }
     } finally {
-      browser.close();
+      page.removeAllListeners();
+      browser.removeAllListeners();
+      await page.close();
+      await browser.close();
     }
   }
 }
