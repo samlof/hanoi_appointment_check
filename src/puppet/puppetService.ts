@@ -356,6 +356,12 @@ export class PuppetService {
     avdays = await this.checkCalendarPage(page, "calendar2.png");
     if (avdays) ret.push(...avdays);
 
+    await page.click(".fc-header-right .fc-button");
+    await page.waitForTimeout(3 * 1000);
+
+    avdays = await this.checkCalendarPage(page, "calendar3.png");
+    if (avdays) ret.push(...avdays);
+
     return ret;
   }
 

@@ -35,6 +35,7 @@ async function checkSeatsCalendar() {
   const logger = container.get(Logger);
   const telegrafService = container.get(TelegrafService);
   const puppet = container.get(PuppetService);
+  const foundFreeDate: { [key: string]: boolean } = {};
 
   logger.log("Running checkSeatsCalendar");
 
@@ -61,7 +62,6 @@ async function checkSeatsCalendar() {
       // Log in
       await puppet.Login(page, fakePerson.Email, fakePerson.Password);
 
-      const foundFreeDate: { [key: string]: boolean } = {};
       // Reusable function to check different categories
       const checkSeatsFunc = async (
         seatCategory: SeatCategory,
