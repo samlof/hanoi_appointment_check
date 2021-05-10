@@ -85,13 +85,20 @@ export class CaptchaService {
       formData.append("max_len", 5);
       formData.append("language", 2);
 
-      const sendRet = await fetch(inUrl, {
-        method: "POST",
-        body: formData,
-      });
-      let text = await sendRet.text();
-      if (text === "ERROR_NO_SLOT_AVAILABLE") {
-        await utils.sleep(5000);
+      // Run loop to retry if sending captcha failed
+      let text = "";
+      for (let i = 0; i < 5; i++) {
+        const sendRet = await fetch(inUrl, {
+          method: "POST",
+          body: formData,
+        });
+        text = await sendRet.text();
+        if (text === "ERROR_NO_SLOT_AVAILABLE") {
+          await utils.sleep(1000);
+        } else if (!text.startsWith("OK|")) {
+          this.logger.error("error sending captcha: " + text);
+          return;
+        } else break;
       }
       if (!text.startsWith("OK|")) {
         this.logger.error("error sending captcha: " + text);

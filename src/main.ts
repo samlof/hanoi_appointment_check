@@ -74,35 +74,78 @@ async function checkSeatsCalendar() {
         );
         if (avDates?.length > 0) {
           // Found dates. Send to chat and broadcast
-          const msg = `${categoryName} found seats: ${avDates.join(
-            ","
-          )}. Go to ${loginPageUrl} to try to reserve a seat`;
-          telegrafService.sendBroadcast(msg);
+          const msg = `${categoryName} found seats: ${avDates
+            .map((d) => d.date)
+            .join(",")}. Go to ${loginPageUrl} to try to reserve a seat`;
           telegrafService.sendChat(msg);
+          telegrafService.sendBroadcast(msg);
         }
       };
 
       // Run infinite loop checking seats until an exception is thrown
+      let timeoutErrors = 0;
       while (true) {
-        await checkSeatsFunc(SeatCategory.RPFamily, "Family");
-        await checkSeatsFunc(SeatCategory.RPStudent, "Student");
-        await checkSeatsFunc(SeatCategory.RPWork, "Work");
+        try {
+          await checkSeatsFunc(SeatCategory.RPFamily, "Family");
+          await checkSeatsFunc(SeatCategory.RPStudent, "Student");
+          await checkSeatsFunc(SeatCategory.RPWork, "Work");
+        } catch (error) {
+          // Check for timeout error. In that case retry the loop
+          const errorJson = JSON.stringify(error);
+          let stack: string = "";
+          if (error.stack && typeof error.stack === "string")
+            stack = error.stack;
+          if (
+            timeoutErrors < 5 &&
+            (errorJson.includes("TimeoutError") ||
+              stack.includes("TimeoutError"))
+          ) {
+            logger.log("Got timeout error. Retrying loop");
+            timeoutErrors++;
+            await utils.sleep(5 * 1000);
+            continue;
+          }
+          throw error;
+        }
 
         await utils.sleep(30 * 1000);
       }
     } catch (error) {
-      const errorJson = JSON.stringify(error);
-      if (errorJson.includes("Invalid url for checking calendar days")) {
+      if (typeof error === "string") {
+        logger.error(`Checking seats got string error ${error}`);
+        continue;
+      } else if (!(error instanceof Error)) {
+        logger.error(
+          `Checking seats got an error that's not Error but ${typeof error}. JSON: ${JSON.stringify(
+            error
+          )}`
+        );
+        continue;
+      }
+      let stack: string = "";
+      if (error.stack && typeof error.stack === "string") stack = error.stack;
+      const searchString = error.message + stack;
+      if (searchString.includes("Invalid url for checking calendar days")) {
+        // Invalid url. Maybe session ran out
         logger.log(
           `Got url ${page.url()} when expected final calendar. Making new browser and account`
         );
-      } else if (errorJson.includes("TimeoutError")) {
+      } else if (searchString.includes("TimeoutError")) {
+        // Timeout error. Means we retried a few times already but still something wrong. Can try with new browser
+        logger.log(`Got timeou error: ${error.message} at ${error.stack}`);
+        const sc = await page.screenshot();
+        if (sc) telegrafService.sendImageLog(sc);
+      } else if (searchString.includes("cannot get to home page")) {
+        // Probably logged out. Just put a log instead of error
         logger.log(
-          `Got timetout error checking seats:  ${errorJson} at ${error.stack}`
+          `Got "cannot get to home page". Current page is ${page.url()}. Logging in again`
         );
       } else {
-        const errMsg = `Got exception while checking seats: ${errorJson} at ${error.stack}`;
+        // Unknown error
+        const errMsg = `Got exception while checking seats: ${error.message} at ${error.stack}`;
         logger.error(errMsg);
+        const sc = await page.screenshot();
+        if (sc) telegrafService.sendImageMe(sc);
       }
     } finally {
       browser.close();

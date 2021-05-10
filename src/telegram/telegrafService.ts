@@ -46,6 +46,17 @@ export class TelegrafService {
       source: buffer,
     });
   }
+  public async sendImageLog(buffer: string | Buffer): Promise<void> {
+    if (typeof buffer === "string") {
+      await this.bot.telegram.sendPhoto(log_chat_id, {
+        source: buffer,
+      });
+      return;
+    }
+    await this.bot.telegram.sendPhoto(log_chat_id, {
+      source: buffer,
+    });
+  }
 
   public async sendImageChat(photoFile: string): Promise<void> {
     if (telegramOff) return;
@@ -58,7 +69,26 @@ export class TelegrafService {
   public async sendBroadcast(msg: string): Promise<void> {
     if (telegramOff) return;
     for (const id of this.broadcastFileService.readIds()) {
-      await this.bot.telegram.sendMessage(id, msg);
+      try {
+        await this.bot.telegram.sendMessage(id, msg);
+      } catch (error) {
+        if (!(error instanceof Error)) {
+          this.sendMe(
+            `Sending broadcast msg ${msg} to id ${id} got error not Error: ${JSON.stringify(
+              error
+            )}`
+          );
+          continue;
+        }
+
+        const searchStr = error.message + error.stack;
+        // Remove from list if was blocked
+        if (searchStr.includes("bot was blocked by the user"))
+          this.broadcastFileService.removeId(id);
+        else {
+          `Sending broadcast msg ${msg} to id ${id} got error not Error: ${error.message} at: ${error.stack}`;
+        }
+      }
     }
   }
 

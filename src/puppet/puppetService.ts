@@ -475,16 +475,10 @@ export class PuppetService {
       info.Email
     );
 
-    try {
-      await Promise.all([
-        page.waitForNavigation(),
-        page.click("#submitbuttonId"),
-      ]);
-    } catch (error) {
-      this.logger.error(
-        "Error submitting applicant info: " + JSON.stringify(error)
-      );
-    }
+    await Promise.all([
+      page.waitForNavigation(),
+      page.click("#submitbuttonId"),
+    ]);
     await page.waitForTimeout(200);
   }
 
