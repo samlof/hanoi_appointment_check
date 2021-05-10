@@ -4,6 +4,8 @@ import { utils } from "../utils";
 import { bot_token } from "./bot_token";
 import { BroadcastFileService } from "./broadcastFileService";
 
+import { version } from "../../package.json";
+
 function log(msg: string) {
   // eslint-disable-next-line no-console
   console.log(utils.getTimestamp() + msg);
@@ -29,7 +31,7 @@ export class BroadcastServer {
       );
     });
 
-    log("Starting telegraf bot");
+    log("Starting telegraf bot v" + version);
     bot.launch();
 
     // Enable graceful stop
