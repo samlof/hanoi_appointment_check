@@ -1,16 +1,12 @@
 {
   "name": "hanoi_appointment",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "",
   "main": "dist/main.js",
   "scripts": {
-    "start": "tsc && node --trace-warnings dist/main.js",
-    "run": "node --trace-warnings dist/main.js",
+    "start": "tsc && node --trace-warnings dist/src/main.js",
     "build": "tsc --build --clean && tsc",
-    "telegram": "node dist/runTelegrafBot.js",
     "lint": "eslint . --ext .ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "bumver": "npm --no-git-tag-version version patch",
     "prepare": "husky install"
   },
   "keywords": [],
