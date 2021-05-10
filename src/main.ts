@@ -118,10 +118,7 @@ async function checkSeatsCalendar() {
           ) {
             logger.log("Got timeout error. Retrying loop");
             timeoutErrors++;
-            await utils.sleep(5 * 1000);
-            continue;
-          }
-          throw error;
+          } else throw error;
         }
 
         await utils.sleep(30 * 1000);
