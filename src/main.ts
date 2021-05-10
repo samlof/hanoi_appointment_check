@@ -15,7 +15,7 @@ import {
 import { TelegrafService } from "./telegram/telegrafService";
 import { utils } from "./utils";
 
-const version = "0.1.0";
+import { version } from "../package.json";
 
 async function main() {
   const logger = container.get(Logger);
