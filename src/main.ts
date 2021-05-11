@@ -113,8 +113,6 @@ async function checkSeatsCalendar() {
           if (searchString.includes("TimeoutError")) {
             // Timeout error. Don't log as error but just normal log
             logger.log(`Got timeout error: ${error.message} at ${error.stack}`);
-            const sc = await page.screenshot();
-            if (sc) telegrafService.sendImageMe(sc);
           } else throw error;
         }
 
@@ -141,8 +139,6 @@ async function checkSeatsCalendar() {
       } else if (searchString.includes("TimeoutError")) {
         // Timeout error. Don't log as error but just normal log
         logger.log(`Got timeout error: ${error.message} at ${error.stack}`);
-        const sc = await page.screenshot();
-        if (sc) telegrafService.sendImageMe(sc);
       } else if (searchString.includes("cannot get to home page")) {
         // Probably logged out. Just put a log instead of error
         logger.log(
@@ -152,8 +148,6 @@ async function checkSeatsCalendar() {
         // Unknown error
         const errMsg = `Got exception while checking seats: ${error.message} at ${error.stack}`;
         logger.error(errMsg);
-        const sc = await page.screenshot();
-        if (sc) telegrafService.sendImageMe(sc);
       }
     } finally {
       logger.log("Removing listeners and closing browser");

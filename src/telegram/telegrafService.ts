@@ -73,12 +73,12 @@ export class TelegrafService {
     if (telegramOff) return;
 
     if (typeof buffer === "string") {
-      await this.bot.telegram.sendPhoto(log_chat_id, {
+      await this.bot.telegram.sendPhoto(chat_id, {
         source: buffer,
       });
       return;
     }
-    await this.bot.telegram.sendPhoto(log_chat_id, {
+    await this.bot.telegram.sendPhoto(chat_id, {
       source: buffer,
     });
   }
