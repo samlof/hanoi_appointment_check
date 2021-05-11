@@ -43,7 +43,6 @@ async function checkSeatsCalendar() {
     const [browser, page] = await puppet.getBrowser();
     try {
       // Make new account
-      logger.log("Making new account for logging in");
       const fakePerson = makeFakePerson();
       const seatInfo = {
         Email: fakePerson.Email,
@@ -57,9 +56,11 @@ async function checkSeatsCalendar() {
         Gender: Gender.Male,
         Nationality: Country.VIETNAM,
       };
+      logger.log("Making new account for logging in");
       await puppet.makeNewAccount(page, fakePerson);
 
       // Log in
+      logger.log("Logging in");
       await puppet.Login(page, fakePerson.Email, fakePerson.Password);
 
       // Reusable function to check different categories
@@ -99,27 +100,10 @@ async function checkSeatsCalendar() {
       };
 
       // Run infinite loop checking seats until an exception is thrown
-      let timeoutErrors = 0;
       while (true) {
-        try {
-          await checkSeatsFunc(SeatCategory.RPFamily, "FAMILY");
-          await checkSeatsFunc(SeatCategory.RPStudent, "STUDENT");
-          await checkSeatsFunc(SeatCategory.RPWork, "WORK");
-        } catch (error) {
-          // Check for timeout error. In that case retry the loop
-          const errorJson = JSON.stringify(error);
-          let stack: string = "";
-          if (error.stack && typeof error.stack === "string")
-            stack = error.stack;
-          if (
-            timeoutErrors < 5 &&
-            (errorJson.includes("TimeoutError") ||
-              stack.includes("TimeoutError"))
-          ) {
-            logger.log("Got timeout error. Retrying loop");
-            timeoutErrors++;
-          } else throw error;
-        }
+        await checkSeatsFunc(SeatCategory.RPFamily, "FAMILY");
+        await checkSeatsFunc(SeatCategory.RPStudent, "STUDENT");
+        await checkSeatsFunc(SeatCategory.RPWork, "WORK");
 
         await utils.sleep(30 * 1000);
       }
@@ -140,18 +124,16 @@ async function checkSeatsCalendar() {
       const searchString = error.message + stack;
       if (searchString.includes("Invalid url for checking calendar days")) {
         // Invalid url. Maybe session ran out
-        logger.log(
-          `Got url ${page.url()} when expected final calendar. Making new browser and account`
-        );
+        logger.log(`Got url ${page.url()} when expected final calendar`);
       } else if (searchString.includes("TimeoutError")) {
-        // Timeout error. Means we retried a few times already but still something wrong. Can try with new browser
-        logger.log(`Got timeou error: ${error.message} at ${error.stack}`);
+        // Timeout error. Don't log as error but just normal log
+        logger.log(`Got timeout error: ${error.message} at ${error.stack}`);
         const sc = await page.screenshot();
-        if (sc) telegrafService.sendImageLog(sc);
+        if (sc) telegrafService.sendImageMe(sc);
       } else if (searchString.includes("cannot get to home page")) {
         // Probably logged out. Just put a log instead of error
         logger.log(
-          `Got "cannot get to home page". Current page is ${page.url()}. Logging in again`
+          `Got "cannot get to home page". Current page is ${page.url()}`
         );
       } else {
         // Unknown error
@@ -161,10 +143,10 @@ async function checkSeatsCalendar() {
         if (sc) telegrafService.sendImageMe(sc);
       }
     } finally {
+      logger.log("Removing listeners and closing browser");
       page.removeAllListeners();
       browser.removeAllListeners();
-      await page.close();
-      await browser.close();
+      page.close().then(() => browser.close());
     }
   }
 }
