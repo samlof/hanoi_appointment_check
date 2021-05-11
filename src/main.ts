@@ -101,9 +101,22 @@ async function checkSeatsCalendar() {
 
       // Run infinite loop checking seats until an exception is thrown
       while (true) {
-        await checkSeatsFunc(SeatCategory.RPFamily, "FAMILY");
-        await checkSeatsFunc(SeatCategory.RPStudent, "STUDENT");
-        await checkSeatsFunc(SeatCategory.RPWork, "WORK");
+        try {
+          await checkSeatsFunc(SeatCategory.RPFamily, "FAMILY");
+          await checkSeatsFunc(SeatCategory.RPStudent, "STUDENT");
+          await checkSeatsFunc(SeatCategory.RPWork, "WORK");
+        } catch (error) {
+          let stack: string = "";
+          if (error.stack && typeof error.stack === "string")
+            stack = error.stack;
+          const searchString = error.message + stack;
+          if (searchString.includes("TimeoutError")) {
+            // Timeout error. Don't log as error but just normal log
+            logger.log(`Got timeout error: ${error.message} at ${error.stack}`);
+            const sc = await page.screenshot();
+            if (sc) telegrafService.sendImageMe(sc);
+          } else throw error;
+        }
 
         await utils.sleep(30 * 1000);
       }
