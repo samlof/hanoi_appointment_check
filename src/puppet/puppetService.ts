@@ -280,7 +280,7 @@ export class PuppetService {
       await page.goto(this.loginHomePageUrl);
     }
     if (page.url() !== this.loginHomePageUrl) {
-      throw new Error("GotoCalendarPage: cannot get to home page");
+      throw new Error("GotoCalendarPage: Invalid url cannot get to home page");
     }
 
     const linkHandlers = await page.$x(
@@ -294,6 +294,9 @@ export class PuppetService {
 
     await Promise.all([page.waitForNavigation(), linkHandlers[0].click()]);
     await page.waitForTimeout(500);
+    if (page.url().includes("RegisteredLogin")) {
+      throw new Error("Invalid url when filling applicant form");
+    }
 
     await page.select("#LocationId", "33");
     await page.waitForTimeout(500);
@@ -347,7 +350,7 @@ export class PuppetService {
     }
 
     const ret: AvailablyDaysResult = { dates: [], images: [] };
-    let avdays = await this.checkCalendarPage(page);
+    let avdays = await this.checkCalendarElement(page);
     if (avdays) {
       ret.dates.push(...avdays);
 
@@ -359,7 +362,7 @@ export class PuppetService {
     await page.click(".fc-header-right .fc-button");
     await page.waitForTimeout(3 * 1000);
 
-    avdays = await this.checkCalendarPage(page);
+    avdays = await this.checkCalendarElement(page);
     if (avdays) {
       ret.dates.push(...avdays);
 
@@ -371,7 +374,7 @@ export class PuppetService {
     await page.click(".fc-header-right .fc-button");
     await page.waitForTimeout(3 * 1000);
 
-    avdays = await this.checkCalendarPage(page);
+    avdays = await this.checkCalendarElement(page);
     if (avdays) {
       ret.dates.push(...avdays);
 
@@ -383,8 +386,15 @@ export class PuppetService {
     return ret;
   }
 
-  private async checkCalendarPage(page: Page): Promise<string[] | undefined> {
-    await page.waitForTimeout(500);
+  /**
+   * @returns Available date strings. Ex  2021-05-12 YYYY-MM-DD
+   */
+  private async checkCalendarElement(
+    page: Page
+  ): Promise<string[] | undefined> {
+    if (page.url().includes("RegisteredLogin")) {
+      throw new Error("Invalid url when checking calendar element");
+    }
 
     let backgroundStyles = await page.$$eval("td.fc-day", (ell) =>
       ell.map((el) => ({
@@ -441,6 +451,10 @@ export class PuppetService {
   }
 
   async FillApplicantForm(page: Page, info: ApplicantInfo): Promise<void> {
+    if (page.url().includes("RegisteredLogin")) {
+      throw new Error("Invalid url when filling applicant form");
+    }
+
     await page.$eval(
       "#PassportNumber",
       // @ts-ignore because it's input

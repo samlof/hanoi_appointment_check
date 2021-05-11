@@ -133,9 +133,13 @@ async function checkSeatsCalendar() {
       let stack: string = "";
       if (error.stack && typeof error.stack === "string") stack = error.stack;
       const searchString = error.message + stack;
-      if (searchString.includes("Invalid url for checking calendar days")) {
-        // Invalid url. Maybe session ran out
-        logger.log(`Got url ${page.url()} when expected final calendar`);
+      if (searchString.includes("Invalid url")) {
+        // Invalid url
+        logger.log(
+          `Invalid url. Got url ${page.url()} and error ${error.message} at ${
+            error.stack
+          }`
+        );
       } else if (searchString.includes("TimeoutError")) {
         // Timeout error. Don't log as error but just normal log
         logger.log(`Got timeout error: ${error.message} at ${error.stack}`);
