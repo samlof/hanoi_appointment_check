@@ -21,6 +21,8 @@ export const loginPageUrl =
 const registerPageUrl =
   "https://online.vfsglobal.com/FinlandAppt/Account/RegisterUser";
 
+const waitForNavigationTimeout = 120 * 1000;
+
 @injectable()
 export class PuppetService {
   constructor(
@@ -76,7 +78,10 @@ export class PuppetService {
     );
     await page.waitForTimeout(500);
 
-    await Promise.all([page.click(".submitbtn"), page.waitForNavigation()]);
+    await Promise.all([
+      page.click(".submitbtn"),
+      page.waitForNavigation({ timeout: waitForNavigationTimeout }),
+    ]);
     await page.waitForTimeout(500);
 
     if (
@@ -132,7 +137,10 @@ export class PuppetService {
     await page.goto(loginPageUrl);
     await utils.sleep(1000);
 
-    await Promise.all([page.waitForNavigation(), page.click("#NewUser")]);
+    await Promise.all([
+      page.waitForNavigation({ timeout: waitForNavigationTimeout }),
+      page.click("#NewUser"),
+    ]);
     await page.waitForTimeout(1000);
 
     const filename = `${captchaFolder}/registerCaptcha${Date.now()}.png`;
@@ -205,7 +213,7 @@ export class PuppetService {
     await page.waitForTimeout(500);
     await Promise.all([
       await page.click(`input[type="submit"]`),
-      page.waitForNavigation(),
+      page.waitForNavigation({ timeout: waitForNavigationTimeout }),
     ]);
     // Remove dialog accepter.
     page.off("dialog", diabloAccepter);
@@ -292,7 +300,10 @@ export class PuppetService {
       );
     }
 
-    await Promise.all([page.waitForNavigation(), linkHandlers[0].click()]);
+    await Promise.all([
+      page.waitForNavigation({ timeout: waitForNavigationTimeout }),
+      linkHandlers[0].click(),
+    ]);
     await page.waitForTimeout(500);
     if (page.url().includes("RegisteredLogin")) {
       throw new Error("Invalid url when filling applicant form");
@@ -318,18 +329,24 @@ export class PuppetService {
     );
 
     // Go to applicant page
-    await Promise.all([page.waitForNavigation(), page.click("#btnContinue")]);
+    await Promise.all([
+      page.waitForNavigation({ timeout: waitForNavigationTimeout }),
+      page.click("#btnContinue"),
+    ]);
     await page.waitForTimeout(500);
 
     // Go to add applicant page
-    await Promise.all([page.waitForNavigation(), page.click(".submitbtn")]);
+    await Promise.all([
+      page.waitForNavigation({ timeout: waitForNavigationTimeout }),
+      page.click(".submitbtn"),
+    ]);
     await page.waitForTimeout(500);
 
     await this.FillApplicantForm(page, info);
 
     // Go to calendar page
     await Promise.all([
-      page.waitForNavigation(),
+      page.waitForNavigation({ timeout: waitForNavigationTimeout }),
       page.click("input[type='submit']"),
     ]);
   }
@@ -513,7 +530,7 @@ export class PuppetService {
     );
 
     await Promise.all([
-      page.waitForNavigation(),
+      page.waitForNavigation({ timeout: waitForNavigationTimeout }),
       page.click("#submitbuttonId"),
     ]);
     await page.waitForTimeout(200);

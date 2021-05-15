@@ -236,5 +236,6 @@ if (!process.env.TEST_ENV) {
   // eslint-disable-next-line no-console
   console.log(utils.getTimestamp() + "Starting in test mode");
 
-  reserveTesting();
+  //reserveTesting();
+  main();
 }
