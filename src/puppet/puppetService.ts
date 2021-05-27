@@ -309,6 +309,8 @@ export class PuppetService {
       throw new Error("Invalid url when filling applicant form");
     }
 
+    this.logger.log("Filling location and category id");
+
     await page.select("#LocationId", "33");
     await page.waitForTimeout(500);
 
@@ -342,6 +344,7 @@ export class PuppetService {
     ]);
     await page.waitForTimeout(500);
 
+    this.logger.log("Filling applicant info");
     await this.FillApplicantForm(page, info);
 
     // Go to calendar page
