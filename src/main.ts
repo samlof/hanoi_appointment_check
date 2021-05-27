@@ -33,6 +33,7 @@ async function main() {
 }
 async function checkSeatsCalendar() {
   const logger = container.get(Logger);
+  logger.init("checkSeatsCalendar()");
   const telegrafService = container.get(TelegrafService);
   const puppet = container.get(PuppetService);
   const foundFreeDate: { [key: string]: boolean } = {};
@@ -71,17 +72,17 @@ async function checkSeatsCalendar() {
         // Go to final calendar page
         await puppet.GotoCalendarPage(page, seatInfo, seatCategory);
         const avDates = await puppet.CheckCalendarDays(page);
-        logger.log(
-          `Found ${avDates?.dates.length} available dates for ${categoryName} category`
-        );
+        let logMsg = `Found ${avDates?.dates.length} available dates for ${categoryName} category`;
         if (avDates?.dates.length > 0) {
+          const avDatesStr = avDates.dates.join(",");
+          logMsg += avDatesStr;
+
+          // Check if found free date sent already
           if (foundFreeDate[categoryName]) return;
           foundFreeDate[categoryName] = true;
 
           // Found dates. Send to chat and broadcast
-          const msg = `${categoryName} found seats: ${avDates.dates.join(
-            ","
-          )}. Go to ${loginPageUrl} to try to reserve a seat`;
+          const msg = `${categoryName} found seats: ${avDatesStr}. Go to ${loginPageUrl} to try to reserve a seat`;
           await telegrafService.sendChat(msg);
           await telegrafService.sendBroadcast(msg);
 
@@ -89,6 +90,7 @@ async function checkSeatsCalendar() {
             if (image) await telegrafService.sendImageChat(image);
           }
         } else {
+          // Check if seat stopped sent already
           if (!foundFreeDate[categoryName]) return;
           foundFreeDate[categoryName] = false;
 
@@ -97,6 +99,7 @@ async function checkSeatsCalendar() {
           telegrafService.sendChat(msg);
           await telegrafService.sendBroadcast(msg);
         }
+        logger.log(logMsg);
       };
 
       // Run infinite loop checking seats until an exception is thrown
@@ -202,6 +205,8 @@ async function makeAccount(): Promise<[string, string] | undefined> {
   return [email, password];
 }
 
+// Used when testing
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function reserveTesting() {
   const puppet = container.get(PuppetService);
   // "Gardner12@gmail.com","UW%s4cjLVeP",
@@ -236,6 +241,6 @@ if (!process.env.TEST_ENV) {
   // eslint-disable-next-line no-console
   console.log(utils.getTimestamp() + "Starting in test mode");
 
-  //reserveTesting();
-  main();
+  reserveTesting();
+  //main();
 }
