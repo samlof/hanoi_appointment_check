@@ -78,7 +78,10 @@ async function checkSeatsCalendar() {
           logMsg += avDatesStr;
 
           // Check if found free date sent already
-          if (foundFreeDate[categoryName]) return;
+          if (foundFreeDate[categoryName]) {
+            logger.log(logMsg);
+            return;
+          }
           foundFreeDate[categoryName] = true;
 
           // Found dates. Send to chat and broadcast
@@ -91,7 +94,10 @@ async function checkSeatsCalendar() {
           }
         } else {
           // Check if seat stopped sent already
-          if (!foundFreeDate[categoryName]) return;
+          if (!foundFreeDate[categoryName]) {
+            logger.log(logMsg);
+            return;
+          }
           foundFreeDate[categoryName] = false;
 
           // No seats available. Send a message telling that
@@ -99,7 +105,6 @@ async function checkSeatsCalendar() {
           telegrafService.sendChat(msg);
           await telegrafService.sendBroadcast(msg);
         }
-        logger.log(logMsg);
       };
 
       // Run infinite loop checking seats until an exception is thrown
