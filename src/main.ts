@@ -33,7 +33,7 @@ async function main() {
 }
 async function checkSeatsCalendar() {
   const logger = container.get(Logger);
-  logger.init("checkSeatsCalendar()");
+  logger.init("checkSeatsCalendar");
   const telegrafService = container.get(TelegrafService);
   const puppet = container.get(PuppetService);
   const foundFreeDate: { [key: string]: boolean } = {};

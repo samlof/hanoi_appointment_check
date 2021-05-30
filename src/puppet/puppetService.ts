@@ -5,7 +5,11 @@ import Adblocker from "puppeteer-extra-plugin-adblocker";
 // @ts-ignore this doesn't have types
 import AnonymizeUaPlugin from "puppeteer-extra-plugin-anonymize-ua";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import { Captcha, captchaFolder, CaptchaService } from "../captchaService";
+import {
+  Captcha,
+  captchaFolder,
+  AntiCaptchaService,
+} from "../captcha/anticaptcha/antiCaptchaService";
 import { Country } from "../countries";
 import { Logger } from "../logger";
 import * as options from "../options";
@@ -27,7 +31,7 @@ const waitForNavigationTimeout = 120 * 1000;
 export class PuppetService {
   constructor(
     private telegrafService: TelegrafService,
-    private captchaService: CaptchaService,
+    private captchaService: AntiCaptchaService,
     private logger: Logger
   ) {
     this.logger.init("PuppetService");

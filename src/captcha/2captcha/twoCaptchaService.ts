@@ -2,10 +2,9 @@ import fs from "fs";
 import fetch from "node-fetch";
 import FormData from "form-data";
 
-import { utils } from "./utils";
-import { TelegrafService } from "./telegram/telegrafService";
+import { utils } from "../../utils";
 import { injectable } from "inversify";
-import { Logger } from "./logger";
+import { Logger } from "../../logger";
 
 const inUrl = "https://2captcha.com/in.php";
 const getUrl = "https://2captcha.com/res.php";
@@ -36,11 +35,8 @@ try {
 }
 
 @injectable()
-export class CaptchaService {
-  constructor(
-    private telegrafService: TelegrafService,
-    private logger: Logger
-  ) {
+export class TwoCaptchaService {
+  constructor(private logger: Logger) {
     this.logger.init("CaptchaService");
   }
 
