@@ -37,7 +37,7 @@ try {
 @injectable()
 export class TwoCaptchaService {
   constructor(private logger: Logger) {
-    this.logger.init("CaptchaService");
+    this.logger.init("TwoCaptchaService");
   }
 
   public reportBad(captchaId: string, filename: string): Promise<unknown> {
