@@ -25,7 +25,7 @@ export const loginPageUrl =
 const registerPageUrl =
   "https://online.vfsglobal.com/FinlandAppt/Account/RegisterUser";
 
-const waitForNavigationTimeout = 120 * 1000;
+const waitForNavigationTimeout = 5 * 60 * 1000;
 
 @injectable()
 export class PuppetService {
