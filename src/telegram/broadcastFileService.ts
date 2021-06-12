@@ -37,15 +37,22 @@ export class BroadcastFileService {
 
     ids.push(id);
     this.resave(ids);
+
+    // Try again if failed to add id
+    if (!this.readIds().includes(id)) this.addId(id);
   }
 
   public removeId(id: string): void {
     const ids = this.readIds();
+
     const i = ids.indexOf(id);
     if (i === -1) return;
 
     ids.splice(i, 1);
     this.resave(ids);
+
+    // Try again if failed to remove id
+    if (this.readIds().includes(id)) this.addId(id);
   }
 
   private resave(ids: string[]): void {
