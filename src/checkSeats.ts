@@ -88,8 +88,7 @@ async function checkSeats(cookies: string): Promise<string> {
           "x-requested-with": "XMLHttpRequest",
           cookie: cookies,
         },
-        body:
-          "countryId=29&missionId=1&LocationId=33&Location=Embassy+of+Finland+-+Hanoi",
+        body: "countryId=29&missionId=1&LocationId=33&Location=Embassy+of+Finland+-+Hanoi",
         method: "POST",
       }
     );

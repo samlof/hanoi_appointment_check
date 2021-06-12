@@ -1,12 +1,14 @@
 /* eslint-disable no-console */
 
 import { injectable } from "inversify";
-import { TelegrafService } from "./telegram/telegrafService";
+import { TelegrafService, TelegrafType } from "./telegram/telegrafService";
 import { utils } from "./utils";
 
 @injectable()
 export class Logger {
-  constructor(private telegrafService: TelegrafService) {}
+  constructor(private telegrafService: TelegrafService) {
+    telegrafService.changeToken(TelegrafType.Log);
+  }
 
   public init(serviceName: string): void {
     this.serviceName = serviceName;

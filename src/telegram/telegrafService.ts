@@ -1,4 +1,9 @@
 import { injectable } from "inversify";
+import {
+  BurstyRateLimiter,
+  RateLimiterMemory,
+  RateLimiterQueue,
+} from "rate-limiter-flexible";
 import { Telegraf } from "telegraf";
 import { utils } from "../utils";
 import { bot_token } from "./bot_token";
@@ -13,29 +18,77 @@ console.log(
 const chat_id = "-1001438199502";
 const samuli_telegram_id = "72781909";
 const log_chat_id = "-1001408943087";
+export enum TelegrafType {
+  Default,
+  Log,
+}
+
+// Global rate limit of 30 per second
+const rateLimiterOpts = {
+  points: 29, // 29 points
+  duration: 1, // Per second
+};
+const rateLimiterMaxQueueSize = {
+  maxQueueSize: 100,
+};
+const rateLimiters = {
+  [TelegrafType.Default]: new RateLimiterQueue(
+    new RateLimiterMemory(rateLimiterOpts),
+    rateLimiterMaxQueueSize
+  ),
+  [TelegrafType.Log]: new RateLimiterQueue(
+    new RateLimiterMemory(rateLimiterOpts),
+    rateLimiterMaxQueueSize
+  ),
+};
+
+// bot will not be able to send more than 20 messages per minute to the same group
+const logRateLimiter = new RateLimiterQueue(
+  new RateLimiterMemory({ duration: 60, points: 20 }),
+  rateLimiterMaxQueueSize
+);
 
 @injectable()
 export class TelegrafService {
   constructor(private broadcastFileService: BroadcastFileService) {
     this.bot = new Telegraf(bot_token);
+    this.type = TelegrafType.Default;
   }
-  private bot: Telegraf;
 
-  public sendMe(msg: string): void {
-    this.bot.telegram.sendMessage(samuli_telegram_id, msg);
+  /**
+   * Can be used to change bot that's used to send any messages
+   * @param type Bot type
+   */
+  public changeToken(type: TelegrafType = TelegrafType.Default): void {
+    this.type = type;
+
+    if (type === TelegrafType.Default) this.bot = new Telegraf(bot_token);
+    else if (type === TelegrafType.Log) this.bot = new Telegraf(bot_token);
   }
+
+  private bot: Telegraf;
+  private type: TelegrafType;
+
+  public async sendMe(msg: string): Promise<void> {
+    await rateLimiters[this.type].removeTokens(1);
+    await this.bot.telegram.sendMessage(samuli_telegram_id, msg);
+  }
+
   public async sendChat(msg: string): Promise<void> {
     if (telegramOff) return;
+    await rateLimiters[this.type].removeTokens(1);
 
     await this.bot.telegram.sendMessage(chat_id, msg);
   }
 
   public async sendImageMeFileName(photoFile: string): Promise<void> {
+    await rateLimiters[this.type].removeTokens(1);
     await this.bot.telegram.sendPhoto(samuli_telegram_id, {
       source: photoFile,
     });
   }
   public async sendImageMe(buffer: string | Buffer): Promise<void> {
+    await rateLimiters[this.type].removeTokens(1);
     if (typeof buffer === "string") {
       await this.bot.telegram.sendPhoto(samuli_telegram_id, {
         source: buffer,
@@ -49,6 +102,8 @@ export class TelegrafService {
 
   public async sendImageLog(buffer: string | Buffer): Promise<void> {
     if (telegramOff) return;
+    await logRateLimiter.removeTokens(1);
+    await rateLimiters[this.type].removeTokens(1);
 
     if (typeof buffer === "string") {
       await this.bot.telegram.sendPhoto(log_chat_id, {
@@ -63,6 +118,7 @@ export class TelegrafService {
 
   public async sendImageChatFile(photoFile: string): Promise<void> {
     if (telegramOff) return;
+    await rateLimiters[this.type].removeTokens(1);
 
     await this.bot.telegram.sendPhoto(chat_id, {
       source: photoFile,
@@ -71,6 +127,7 @@ export class TelegrafService {
 
   public async sendImageChat(buffer: string | Buffer): Promise<void> {
     if (telegramOff) return;
+    await rateLimiters[this.type].removeTokens(1);
 
     if (typeof buffer === "string") {
       await this.bot.telegram.sendPhoto(chat_id, {
@@ -85,11 +142,13 @@ export class TelegrafService {
 
   public async sendBroadcast(msg: string): Promise<void> {
     if (telegramOff) return;
+    await rateLimiters[this.type].removeTokens(1);
 
     for (const id of this.broadcastFileService.readIds()) {
       try {
         await this.bot.telegram.sendMessage(id, msg);
       } catch (error) {
+        // Check if error isn't Error type
         if (!(error instanceof Error)) {
           this.sendMe(
             `Sending broadcast msg ${msg} to id ${id} got error not Error: ${JSON.stringify(
@@ -104,7 +163,9 @@ export class TelegrafService {
         if (searchStr.includes("bot was blocked by the user"))
           this.broadcastFileService.removeId(id);
         else {
-          `Sending broadcast msg ${msg} to id ${id} got error not Error: ${error.message} at: ${error.stack}`;
+          this.sendMe(
+            `Sending broadcast msg ${msg} to id ${id} got error not Error: ${error.message} at: ${error.stack}`
+          );
         }
       }
     }
@@ -112,6 +173,7 @@ export class TelegrafService {
 
   public async sendImageBroadcast(photoFile: string): Promise<void> {
     if (telegramOff) return;
+    await rateLimiters[this.type].removeTokens(1);
 
     const img = await this.bot.telegram.sendPhoto(chat_id, {
       source: photoFile,
@@ -126,6 +188,8 @@ export class TelegrafService {
 
   public async sendLogMessage(msg: string): Promise<void> {
     if (telegramOff) return;
+    await logRateLimiter.removeTokens(1);
+    await rateLimiters[this.type].removeTokens(1);
 
     await this.bot.telegram.sendMessage(log_chat_id, msg);
   }
