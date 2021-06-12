@@ -23,7 +23,10 @@ async function main() {
   logger.log("Running main v" + version);
 
   try {
-    await checkSeatsCalendar();
+    checkSeatsCalendar(SeatCategory.RPFamily, "FAMILY");
+    checkSeatsCalendar(SeatCategory.RPStudent, "STUDENT");
+    checkSeatsCalendar(SeatCategory.RPWork, "WORK");
+    checkSeatsCalendar(SeatCategory.Visa, "SCHENGEN VISA");
   } catch (error) {
     const msg = `Error while checking seats: ${JSON.stringify(error)} at ${
       error.stack
@@ -31,12 +34,15 @@ async function main() {
     logger.error(msg);
   }
 }
-async function checkSeatsCalendar() {
+async function checkSeatsCalendar(
+  seatCategory: SeatCategory,
+  categoryName: string
+) {
   const logger = container.get(Logger);
-  logger.init("checkSeatsCalendar");
+  logger.init(`checkSeatsCalendar ${categoryName}`);
   const telegrafService = container.get(TelegrafService);
   const puppet = container.get(PuppetService);
-  const foundFreeDate: { [key: string]: boolean } = {};
+  let foundFreeDate = false;
 
   logger.log("Running checkSeatsCalendar");
 
@@ -64,13 +70,16 @@ async function checkSeatsCalendar() {
       logger.log("Logging in");
       await puppet.Login(page, fakePerson.Email, fakePerson.Password);
 
-      // Reusable function to check different categories
-      const checkSeatsFunc = async (
-        seatCategory: SeatCategory,
-        categoryName: string
-      ) => {
-        // Go to final calendar page
-        await puppet.GotoCalendarPage(page, seatInfo, seatCategory);
+      // Go to final calendar page
+      logger.log("Going to calendar page");
+      await puppet.GotoCalendarPage(page, seatInfo, seatCategory);
+
+      // Infinite loop to check and reload calendar page
+      while (true) {
+        // Wait 30 seconds between tries
+        await utils.sleep(30 * 1000);
+
+        // Reload and check calendar for free dates
         const avDates = await puppet.CheckCalendarDays(page);
         let logMsg = `Found ${avDates?.dates.length} available dates for ${categoryName} category`;
         if (avDates?.dates.length > 0) {
@@ -78,11 +87,11 @@ async function checkSeatsCalendar() {
           logMsg += avDatesStr;
 
           // Check if found free date sent already
-          if (foundFreeDate[categoryName]) {
+          if (foundFreeDate) {
             logger.log(logMsg);
-            return;
+            continue;
           }
-          foundFreeDate[categoryName] = true;
+          foundFreeDate = true;
 
           // Found dates. Send to chat and broadcast
           const msg = `${categoryName} found seats: ${avDatesStr}. Go to ${loginPageUrl} to try to reserve a seat`;
@@ -94,47 +103,29 @@ async function checkSeatsCalendar() {
           }
         } else {
           // Check if seat stopped sent already
-          if (!foundFreeDate[categoryName]) {
+          if (!foundFreeDate) {
             logger.log(logMsg);
-            return;
+            continue;
           }
-          foundFreeDate[categoryName] = false;
+          foundFreeDate = false;
 
           // No seats available. Send a message telling that
           const msg = `${categoryName} seats stopped being available`;
           telegrafService.sendChat(msg);
           await telegrafService.sendBroadcast(msg);
         }
-      };
-
-      // Run infinite loop checking seats until an exception is thrown
-      while (true) {
-        try {
-          await checkSeatsFunc(SeatCategory.RPFamily, "FAMILY");
-          await checkSeatsFunc(SeatCategory.RPStudent, "STUDENT");
-          await checkSeatsFunc(SeatCategory.RPWork, "WORK");
-        } catch (error) {
-          let stack: string = "";
-          if (error.stack && typeof error.stack === "string")
-            stack = error.stack;
-          const searchString = error.message + stack;
-          if (searchString.includes("TimeoutError")) {
-            // Timeout error. Don't log as error but just normal log
-            logger.log(`Got timeout error: ${error.message} at ${error.stack}`);
-          } else throw error;
-        }
-
-        await utils.sleep(30 * 1000);
       }
     } catch (error) {
       if (typeof error === "string") {
-        logger.error(`Checking seats got string error ${error}`);
+        logger.error(
+          `Checking seats ${categoryName} got string error ${error}. On page ${page.url()}`
+        );
         continue;
       } else if (!(error instanceof Error)) {
         logger.error(
-          `Checking seats got an error that's not Error but ${typeof error}. JSON: ${JSON.stringify(
+          `Checking seats ${categoryName} got an error that's not Error but ${typeof error}. JSON: ${JSON.stringify(
             error
-          )}`
+          )}. On page ${page.url()}`
         );
         continue;
       }
@@ -144,21 +135,27 @@ async function checkSeatsCalendar() {
       if (searchString.includes("Invalid url")) {
         // Invalid url
         logger.log(
-          `Invalid url. Got url ${page.url()} and error ${error.message} at ${
-            error.stack
-          }`
+          `Invalid url. Got ${categoryName} url ${page.url()} and error ${
+            error.message
+          } at ${error.stack}`
         );
       } else if (searchString.includes("TimeoutError")) {
         // Timeout error. Don't log as error but just normal log
-        logger.log(`Got timeout error: ${error.message} at ${error.stack}`);
+        logger.log(
+          `Got timeout error on page ${page.url()}: ${error.message} at ${
+            error.stack
+          }`
+        );
       } else if (searchString.includes("cannot get to home page")) {
         // Probably logged out. Just put a log instead of error
         logger.log(
-          `Got "cannot get to home page". Current page is ${page.url()}`
+          `Got ${categoryName} "cannot get to home page". Current page is ${page.url()}`
         );
       } else {
         // Unknown error
-        const errMsg = `Got exception while checking seats: ${error.message} at ${error.stack}`;
+        const errMsg = `Got ${categoryName} exception while checking seats on page ${page.url()}: ${
+          error.message
+        } at ${error.stack}`;
         logger.error(errMsg);
       }
     } finally {

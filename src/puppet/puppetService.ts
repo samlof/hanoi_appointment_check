@@ -372,6 +372,13 @@ export class PuppetService {
     ) {
       throw new Error("Invalid url for checking calendar days");
     }
+    await page.reload({ timeout: waitForNavigationTimeout });
+    if (
+      page.url() !==
+      "https://online.vfsglobal.com/FinlandAppt/Calendar/FinalCalendar"
+    ) {
+      throw new Error("Invalid url for checking calendar days");
+    }
 
     const ret: AvailablyDaysResult = { dates: [], images: [] };
     let avdays = await this.checkCalendarElement(page);
@@ -590,7 +597,7 @@ export interface ApplicantInfo {
 
 export enum SeatCategory {
   Legalization = "1174", //"Legalization and notary certificates",
-  Passpord = "1173", //"Passport/ID card",
+  Passport = "1173", //"Passport/ID card",
   PopulationData = "1175", //"Registration for population data(birth, marriage)",
   RPStudent = "1172", //"Residence pemit STUDENT/DU HOC",
   RPFamily = "1205", //"Residence permit FAMILY/GIA DINH",
