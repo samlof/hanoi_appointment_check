@@ -24,18 +24,12 @@ async function main() {
 
   logger.log("Running main v" + version);
 
-  try {
-    checkSeatsCalendar(SeatCategory.RPFamily, "FAMILY");
-    checkSeatsCalendar(SeatCategory.RPStudent, "STUDENT");
-    checkSeatsCalendar(SeatCategory.RPWork, "WORK");
-    checkSeatsCalendar(SeatCategory.Visa, "SCHENGEN VISA");
-  } catch (error) {
-    const msg = `Error while checking seats: ${JSON.stringify(error)} at ${
-      error.stack
-    }`;
-    logger.error(msg);
-  }
+  checkSeatsCalendar(SeatCategory.RPFamily, "FAMILY");
+  checkSeatsCalendar(SeatCategory.RPStudent, "STUDENT");
+  checkSeatsCalendar(SeatCategory.RPWork, "WORK");
+  checkSeatsCalendar(SeatCategory.Visa, "SCHENGEN VISA");
 }
+
 async function checkSeatsCalendar(
   seatCategory: SeatCategory,
   categoryName: string
@@ -49,6 +43,7 @@ async function checkSeatsCalendar(
   logger.log("Running checkSeatsCalendar");
 
   while (true) {
+    logger.log("Opening browser");
     const [browser, page] = await puppet.getBrowser();
     try {
       // Make new account
@@ -78,19 +73,19 @@ async function checkSeatsCalendar(
 
       // Infinite loop to check and reload calendar page
       while (true) {
-        // Wait 30 seconds between tries
-        await utils.sleep(30 * 1000);
+        // Wait 20 seconds between tries
+        await utils.sleep(20 * 1000);
 
         // Reload and check calendar for free dates
         const avDates = await puppet.CheckCalendarDays(page);
         let logMsg = `Found ${avDates?.dates.length} available dates for ${categoryName} category`;
         if (avDates?.dates.length > 0) {
           const avDatesStr = avDates.dates.join(",");
-          logMsg += avDatesStr;
+          logMsg += ". " + avDatesStr;
+          logger.log(logMsg);
 
           // Check if found free date sent already
           if (foundFreeDate) {
-            logger.log(logMsg);
             continue;
           }
           foundFreeDate = true;
@@ -104,9 +99,10 @@ async function checkSeatsCalendar(
             if (image) await telegrafService.sendImageChat(image);
           }
         } else {
+          logger.log(logMsg);
+
           // Check if seat stopped sent already
           if (!foundFreeDate) {
-            logger.log(logMsg);
             continue;
           }
           foundFreeDate = false;
@@ -137,7 +133,7 @@ async function checkSeatsCalendar(
 
       if (searchString.includes("?ReturnUrl=/")) {
         // Was logged out. Can just continue
-        logger.log("Was logged out. Close browser and start again");
+        logger.log("Was logged out");
       } else if (searchString.includes("Invalid url")) {
         // Invalid url
         logger.log(

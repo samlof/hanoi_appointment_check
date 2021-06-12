@@ -1,7 +1,7 @@
 {
   "name": "hanoi_appointment",
-  "version": "0.1.23",
-  "description": "",
+  "version": "0.1.24",
+  "description": "A bot to check Finnish Embassy in Vietnam's available slots for appointments",
   "main": "dist/main.js",
   "scripts": {
     "start": "tsc && node --trace-warnings dist/src/main.js",
@@ -13,8 +13,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "date-fns": "^2.21.3",
-    "dotenv": "^8.6.0",
+    "date-fns": "^2.22.1",
+    "dotenv": "^10.0.0",
     "faker": "^5.5.3",
     "form-data": "^4.0.0",
     "inversify": "^5.1.1",
@@ -26,17 +26,17 @@
     "puppeteer-extra-plugin-stealth": "^2.7.8",
     "rate-limiter-flexible": "^2.2.2",
     "reflect-metadata": "^0.1.13",
-    "secure-random-password": "^0.2.2",
+    "secure-random-password": "^0.2.3",
     "telegraf": "^4.3.0"
   },
   "devDependencies": {
-    "@types/faker": "^5.5.5",
+    "@types/faker": "^5.5.6",
     "@types/node-fetch": "^2.5.10",
     "@types/secure-random-password": "^0.2.0",
-    "@typescript-eslint/eslint-plugin": "^4.22.1",
-    "@typescript-eslint/parser": "^4.22.1",
-    "eslint": "^7.26.0",
-    "typescript": "^4.2.4",
-    "husky": "^6.0.0"
+    "@typescript-eslint/eslint-plugin": "^4.26.1",
+    "@typescript-eslint/parser": "^4.26.1",
+    "eslint": "^7.28.0",
+    "husky": "^6.0.0",
+    "typescript": "^4.3.2"
   }
 }

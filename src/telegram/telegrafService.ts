@@ -1,9 +1,5 @@
 import { injectable } from "inversify";
-import {
-  BurstyRateLimiter,
-  RateLimiterMemory,
-  RateLimiterQueue,
-} from "rate-limiter-flexible";
+import { RateLimiterMemory, RateLimiterQueue } from "rate-limiter-flexible";
 import { Telegraf } from "telegraf";
 import { utils } from "../utils";
 import { bot_log_token, bot_token } from "./bot_token";
