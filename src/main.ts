@@ -78,7 +78,7 @@ async function checkSeatsCalendar(
 
         // Reload and check calendar for free dates
         const avDates = await puppet.CheckCalendarDays(page);
-        let logMsg = `Found ${avDates?.dates.length} available dates for ${categoryName} category`;
+        let logMsg = `Found ${avDates?.dates.length} available dates`;
         if (avDates?.dates.length > 0) {
           const avDatesStr = avDates.dates.join(",");
           logMsg += ". " + avDatesStr;
@@ -116,12 +116,12 @@ async function checkSeatsCalendar(
     } catch (error) {
       if (typeof error === "string") {
         logger.error(
-          `Checking seats ${categoryName} got string error ${error}. On page ${page.url()}`
+          `Checking seats got string error ${error}. On page ${page.url()}`
         );
         continue;
       } else if (!(error instanceof Error)) {
         logger.error(
-          `Checking seats ${categoryName} got an error that's not Error but ${typeof error}. JSON: ${JSON.stringify(
+          `Checking seats got an error that's not Error but ${typeof error}. JSON: ${JSON.stringify(
             error
           )}. On page ${page.url()}`
         );
@@ -137,9 +137,9 @@ async function checkSeatsCalendar(
       } else if (searchString.includes("Invalid url")) {
         // Invalid url
         logger.log(
-          `Invalid url. Got ${categoryName} url ${page.url()} and error ${
-            error.message
-          } at ${error.stack}`
+          `Invalid url. Got url ${page.url()} and error ${error.message} at ${
+            error.stack
+          }`
         );
       } else if (searchString.includes("TimeoutError")) {
         // Timeout error. Don't log as error but just normal log
@@ -151,11 +151,11 @@ async function checkSeatsCalendar(
       } else if (searchString.includes("cannot get to home page")) {
         // Probably logged out. Just put a log instead of error
         logger.log(
-          `Got ${categoryName} "cannot get to home page". Current page is ${page.url()}`
+          `Got "cannot get to home page". Current page is ${page.url()}`
         );
       } else {
         // Unknown error
-        const errMsg = `Got ${categoryName} exception while checking seats on page ${page.url()}: ${
+        const errMsg = `Got exception while checking seats on page ${page.url()}: ${
           error.message
         } at ${error.stack}`;
         logger.error(errMsg);
