@@ -132,7 +132,10 @@ async function checkSeatsCalendar(
       let stack: string = "";
       if (error.stack && typeof error.stack === "string") stack = error.stack;
       const searchString = error.message + stack;
-      if (searchString.includes("Invalid url")) {
+
+      if (searchString.includes("?ReturnUrl=/")) {
+        // Was logged out. Can just continue
+      } else if (searchString.includes("Invalid url")) {
         // Invalid url
         logger.log(
           `Invalid url. Got ${categoryName} url ${page.url()} and error ${
