@@ -1,6 +1,6 @@
 {
   "name": "hanoi_appointment",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "description": "",
   "main": "dist/main.js",
   "scripts": {

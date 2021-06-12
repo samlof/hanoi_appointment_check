@@ -6,7 +6,7 @@ import {
 } from "rate-limiter-flexible";
 import { Telegraf } from "telegraf";
 import { utils } from "../utils";
-import { bot_token } from "./bot_token";
+import { bot_log_token, bot_token } from "./bot_token";
 import { BroadcastFileService } from "./broadcastFileService";
 
 const telegramOff = !!process.env.TELEGRAM_OFF;
@@ -63,7 +63,7 @@ export class TelegrafService {
     this.type = type;
 
     if (type === TelegrafType.Default) this.bot = new Telegraf(bot_token);
-    else if (type === TelegrafType.Log) this.bot = new Telegraf(bot_token);
+    else if (type === TelegrafType.Log) this.bot = new Telegraf(bot_log_token);
   }
 
   private bot: Telegraf;
@@ -142,9 +142,9 @@ export class TelegrafService {
 
   public async sendBroadcast(msg: string): Promise<void> {
     if (telegramOff) return;
-    await rateLimiters[this.type].removeTokens(1);
 
     for (const id of this.broadcastFileService.readIds()) {
+      await rateLimiters[this.type].removeTokens(1);
       try {
         await this.bot.telegram.sendMessage(id, msg);
       } catch (error) {
@@ -173,7 +173,6 @@ export class TelegrafService {
 
   public async sendImageBroadcast(photoFile: string): Promise<void> {
     if (telegramOff) return;
-    await rateLimiters[this.type].removeTokens(1);
 
     const img = await this.bot.telegram.sendPhoto(chat_id, {
       source: photoFile,
@@ -182,6 +181,7 @@ export class TelegrafService {
     const fileId = img.photo[0].file_id;
 
     for (const id of this.broadcastFileService.readIds()) {
+      await rateLimiters[this.type].removeTokens(1);
       await this.bot.telegram.sendPhoto(id, fileId);
     }
   }
