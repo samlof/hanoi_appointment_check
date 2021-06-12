@@ -18,6 +18,8 @@ import { utils } from "./utils";
 import { version } from "../package.json";
 
 async function main() {
+  require("events").defaultMaxListeners = 20;
+
   const logger = container.get(Logger);
 
   logger.log("Running main v" + version);

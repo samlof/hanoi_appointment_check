@@ -47,6 +47,11 @@ const logRateLimiter = new RateLimiterQueue(
   new RateLimiterMemory({ duration: 60, points: 20 }),
   rateLimiterMaxQueueSize
 );
+// bot shouldn't send more than one message per second
+const logRateLimiter2 = new RateLimiterQueue(
+  new RateLimiterMemory({ duration: 1, points: 1 }),
+  rateLimiterMaxQueueSize
+);
 
 @injectable()
 export class TelegrafService {
@@ -100,22 +105,6 @@ export class TelegrafService {
     });
   }
 
-  public async sendImageLog(buffer: string | Buffer): Promise<void> {
-    if (telegramOff) return;
-    await logRateLimiter.removeTokens(1);
-    await rateLimiters[this.type].removeTokens(1);
-
-    if (typeof buffer === "string") {
-      await this.bot.telegram.sendPhoto(log_chat_id, {
-        source: buffer,
-      });
-      return;
-    }
-    await this.bot.telegram.sendPhoto(log_chat_id, {
-      source: buffer,
-    });
-  }
-
   public async sendImageChatFile(photoFile: string): Promise<void> {
     if (telegramOff) return;
     await rateLimiters[this.type].removeTokens(1);
@@ -147,6 +136,7 @@ export class TelegrafService {
       await rateLimiters[this.type].removeTokens(1);
       try {
         await this.bot.telegram.sendMessage(id, msg);
+        // Catch block to check if bot is blocked. Then remove from userIds list
       } catch (error) {
         // Check if error isn't Error type
         if (!(error instanceof Error)) {
@@ -188,9 +178,31 @@ export class TelegrafService {
 
   public async sendLogMessage(msg: string): Promise<void> {
     if (telegramOff) return;
-    await logRateLimiter.removeTokens(1);
-    await rateLimiters[this.type].removeTokens(1);
+    await Promise.all([
+      logRateLimiter.removeTokens(1),
+      logRateLimiter2.removeTokens(1),
+      rateLimiters[this.type].removeTokens(1),
+    ]);
 
     await this.bot.telegram.sendMessage(log_chat_id, msg);
+  }
+
+  public async sendImageLog(buffer: string | Buffer): Promise<void> {
+    if (telegramOff) return;
+    await Promise.all([
+      logRateLimiter.removeTokens(1),
+      logRateLimiter2.removeTokens(1),
+      rateLimiters[this.type].removeTokens(1),
+    ]);
+
+    if (typeof buffer === "string") {
+      await this.bot.telegram.sendPhoto(log_chat_id, {
+        source: buffer,
+      });
+      return;
+    }
+    await this.bot.telegram.sendPhoto(log_chat_id, {
+      source: buffer,
+    });
   }
 }
