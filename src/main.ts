@@ -135,6 +135,7 @@ async function checkSeatsCalendar(
 
       if (searchString.includes("?ReturnUrl=/")) {
         // Was logged out. Can just continue
+        logger.log("Was logged out. Close browser and start again");
       } else if (searchString.includes("Invalid url")) {
         // Invalid url
         logger.log(
