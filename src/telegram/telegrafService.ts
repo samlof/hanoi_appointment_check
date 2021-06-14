@@ -40,12 +40,12 @@ const rateLimiters = {
 
 // bot will not be able to send more than 20 messages per minute to the same group
 const logRateLimiter = new RateLimiterQueue(
-  new RateLimiterMemory({ duration: 60, points: 20 }),
+  new RateLimiterMemory({ duration: 60, points: 18 }),
   rateLimiterMaxQueueSize
 );
 // bot shouldn't send more than one message per second
 const logRateLimiter2 = new RateLimiterQueue(
-  new RateLimiterMemory({ duration: 1, points: 1 }),
+  new RateLimiterMemory({ duration: 2, points: 1 }),
   rateLimiterMaxQueueSize
 );
 
