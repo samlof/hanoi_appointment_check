@@ -385,9 +385,9 @@ export class PuppetService {
     if (avdays) {
       ret.dates.push(...avdays);
 
-      const calendarEl = await page.$("#calendar");
-      const calendarPic = await calendarEl?.screenshot();
-      ret.images.push(calendarPic);
+      // const calendarEl = await page.$("#calendar");
+      // const calendarPic = await calendarEl?.screenshot();
+      // ret.images.push(calendarPic);
     }
 
     await page.click(".fc-header-right .fc-button");
@@ -397,9 +397,9 @@ export class PuppetService {
     if (avdays) {
       ret.dates.push(...avdays);
 
-      const calendarEl = await page.$("#calendar");
-      const calendarPic = await calendarEl?.screenshot();
-      ret.images.push(calendarPic);
+      // const calendarEl = await page.$("#calendar");
+      // const calendarPic = await calendarEl?.screenshot();
+      // ret.images.push(calendarPic);
     }
 
     await page.click(".fc-header-right .fc-button");
@@ -409,9 +409,9 @@ export class PuppetService {
     if (avdays) {
       ret.dates.push(...avdays);
 
-      const calendarEl = await page.$("#calendar");
-      const calendarPic = await calendarEl?.screenshot();
-      ret.images.push(calendarPic);
+      // const calendarEl = await page.$("#calendar");
+      // const calendarPic = await calendarEl?.screenshot();
+      // ret.images.push(calendarPic);
     }
 
     return ret;

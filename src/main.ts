@@ -94,10 +94,6 @@ async function checkSeatsCalendar(
           const msg = `${categoryName} found seats: ${avDatesStr}. Go to ${loginPageUrl} to try to reserve a seat`;
           await telegrafService.sendChat(msg);
           await telegrafService.sendBroadcast(msg);
-
-          for (const image of avDates.images) {
-            if (image) await telegrafService.sendImageChat(image);
-          }
         } else {
           logger.log(logMsg);
 
