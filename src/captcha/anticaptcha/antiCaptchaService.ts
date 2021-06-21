@@ -88,7 +88,7 @@ export class AntiCaptchaService {
               body: fileBase64,
               phrase: false,
               case: false,
-              numeric: 0,
+              numeric: 2, // Only letters, no numbers
               math: false,
               minLength: 5,
               maxLength: 5,
