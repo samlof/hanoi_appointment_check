@@ -1,9 +1,5 @@
 import { injectable } from "inversify";
-import {
-  RateLimiterMemory,
-  RateLimiterQueue,
-  RateLimiterUnion,
-} from "rate-limiter-flexible";
+import { RateLimiterMemory, RateLimiterQueue } from "rate-limiter-flexible";
 import { Telegraf } from "telegraf";
 import { utils } from "../utils";
 import { bot_log_token, bot_token } from "./bot_token";
@@ -31,35 +27,26 @@ const rateLimiterOpts = {
 const rateLimiterMaxQueueSize = {
   maxQueueSize: 100,
 };
-const logRateLimiterMemory = new RateLimiterMemory({
-  ...rateLimiterOpts,
-  keyPrefix: "logoveralllimit",
-});
 const rateLimiters = {
   [TelegrafType.Default]: new RateLimiterQueue(
     new RateLimiterMemory(rateLimiterOpts),
     rateLimiterMaxQueueSize
   ),
   [TelegrafType.Log]: new RateLimiterQueue(
-    logRateLimiterMemory,
+    new RateLimiterMemory(rateLimiterOpts),
     rateLimiterMaxQueueSize
   ),
 };
 
-const logRateLimiterUnion = new RateLimiterUnion(
-  // bot will not be able to send more than 20 messages per minute to the same group
-  new RateLimiterMemory({
-    duration: 60,
-    points: 15,
-    keyPrefix: "log20perminute",
-  }),
-  // bot shouldn't send more than one message per second
-  new RateLimiterMemory({
-    duration: 2,
-    points: 1,
-    keyPrefix: "logonepersecond",
-  }),
-  logRateLimiterMemory
+// bot will not be able to send more than 20 messages per minute to the same group
+const logRateLimiter = new RateLimiterQueue(
+  new RateLimiterMemory({ duration: 60, points: 16 }),
+  rateLimiterMaxQueueSize
+);
+// bot shouldn't send more than one message per second
+const logRateLimiter2 = new RateLimiterQueue(
+  new RateLimiterMemory({ duration: 3, points: 1 }),
+  rateLimiterMaxQueueSize
 );
 
 @injectable()
@@ -187,14 +174,22 @@ export class TelegrafService {
 
   public async sendLogMessage(msg: string): Promise<void> {
     if (telegramOff) return;
-    await logRateLimiterUnion.consume(1);
+    await Promise.all([
+      logRateLimiter.removeTokens(1),
+      logRateLimiter2.removeTokens(1),
+      rateLimiters[this.type].removeTokens(1),
+    ]);
 
     await this.bot.telegram.sendMessage(log_chat_id, msg);
   }
 
   public async sendImageLog(buffer: string | Buffer): Promise<void> {
     if (telegramOff) return;
-    await logRateLimiterUnion.consume(1);
+    await Promise.all([
+      logRateLimiter.removeTokens(1),
+      logRateLimiter2.removeTokens(1),
+      rateLimiters[this.type].removeTokens(1),
+    ]);
 
     if (typeof buffer === "string") {
       await this.bot.telegram.sendPhoto(log_chat_id, {
