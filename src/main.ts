@@ -30,6 +30,12 @@ async function main() {
   checkSeatsCalendar(SeatCategory.Visa, "SCHENGEN VISA");
 }
 
+enum FoundDateStatus {
+  NotFound,
+  Found,
+  PendingNotFound,
+}
+
 async function checkSeatsCalendar(
   seatCategory: SeatCategory,
   categoryName: string
@@ -38,7 +44,13 @@ async function checkSeatsCalendar(
   logger.init(`checkSeatsCalendar ${categoryName}`);
   const telegrafService = container.get(TelegrafService);
   const puppet = container.get(PuppetService);
-  let foundFreeDate = false;
+
+  let foundFreeDate: FoundDateStatus = FoundDateStatus.NotFound;
+  if (
+    seatCategory === SeatCategory.RPStudent ||
+    seatCategory === SeatCategory.Visa
+  )
+    foundFreeDate = FoundDateStatus.Found;
 
   logger.log("Running checkSeatsCalendar");
 
@@ -85,10 +97,10 @@ async function checkSeatsCalendar(
           logger.log(logMsg);
 
           // Check if found free date sent already
-          if (foundFreeDate) {
+          if (foundFreeDate === FoundDateStatus.Found) {
             continue;
           }
-          foundFreeDate = true;
+          foundFreeDate = FoundDateStatus.Found;
 
           // Found dates. Send to chat and broadcast
           const msg = `${categoryName} found seats: ${avDatesStr}. Go to ${loginPageUrl} to try to reserve a seat`;
@@ -98,10 +110,15 @@ async function checkSeatsCalendar(
           logger.log(logMsg);
 
           // Check if seat stopped sent already
-          if (!foundFreeDate) {
+          if (foundFreeDate === FoundDateStatus.NotFound) {
             continue;
           }
-          foundFreeDate = false;
+          // Pending state since sometimes there are still slots but this says there aren't
+          if (foundFreeDate !== FoundDateStatus.PendingNotFound) {
+            foundFreeDate = FoundDateStatus.PendingNotFound;
+            continue;
+          }
+          foundFreeDate = FoundDateStatus.NotFound;
 
           // No seats available. Send a message telling that
           const msg = `${categoryName} seats stopped being available`;
