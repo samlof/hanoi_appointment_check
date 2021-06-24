@@ -16,6 +16,7 @@ import { TelegrafService } from "./telegram/telegrafService";
 import { utils } from "./utils";
 
 import { version } from "../package.json";
+import { FoundDateState, FoundDateStatus } from "./foundDateState";
 
 async function main() {
   require("events").defaultMaxListeners = 20;
@@ -30,12 +31,6 @@ async function main() {
   checkSeatsCalendar(SeatCategory.Visa, "SCHENGEN VISA");
 }
 
-enum FoundDateStatus {
-  NotFound,
-  Found,
-  PendingNotFound,
-}
-
 async function checkSeatsCalendar(
   seatCategory: SeatCategory,
   categoryName: string
@@ -44,13 +39,7 @@ async function checkSeatsCalendar(
   logger.init(`checkSeatsCalendar ${categoryName}`);
   const telegrafService = container.get(TelegrafService);
   const puppet = container.get(PuppetService);
-
-  let foundFreeDate: FoundDateStatus = FoundDateStatus.NotFound;
-  if (
-    seatCategory === SeatCategory.RPStudent ||
-    seatCategory === SeatCategory.Visa
-  )
-    foundFreeDate = FoundDateStatus.Found;
+  const foundDateState = container.get(FoundDateState);
 
   logger.log("Running checkSeatsCalendar");
 
@@ -91,6 +80,8 @@ async function checkSeatsCalendar(
         // Reload and check calendar for free dates
         const avDates = await puppet.CheckCalendarDays(page);
         let logMsg = `Found ${avDates?.dates.length} available dates`;
+
+        const foundFreeDate = await foundDateState.getState(categoryName);
         if (avDates?.dates.length > 0) {
           const avDatesStr = avDates.dates.join(",");
           logMsg += ". " + avDatesStr;
@@ -100,7 +91,7 @@ async function checkSeatsCalendar(
           if (foundFreeDate === FoundDateStatus.Found) {
             continue;
           }
-          foundFreeDate = FoundDateStatus.Found;
+          foundDateState.saveState(seatCategory, FoundDateStatus.Found);
 
           // Found dates. Send to chat and broadcast
           const msg = `${categoryName} found seats: ${avDatesStr}. Go to ${loginPageUrl} to try to reserve a seat`;
@@ -115,10 +106,13 @@ async function checkSeatsCalendar(
           }
           // Pending state since sometimes there are still slots but this says there aren't
           if (foundFreeDate !== FoundDateStatus.PendingNotFound) {
-            foundFreeDate = FoundDateStatus.PendingNotFound;
+            foundDateState.saveState(
+              seatCategory,
+              FoundDateStatus.PendingNotFound
+            );
             continue;
           }
-          foundFreeDate = FoundDateStatus.NotFound;
+          foundDateState.saveState(seatCategory, FoundDateStatus.NotFound);
 
           // No seats available. Send a message telling that
           const msg = `${categoryName} seats stopped being available`;
