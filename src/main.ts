@@ -91,7 +91,11 @@ async function checkSeatsCalendar(
           if (foundFreeDate === FoundDateStatus.Found) {
             continue;
           }
-          foundDateState.saveState(seatCategory, FoundDateStatus.Found);
+          // Check if found free date is pending not found. Then reset it and return
+          if (foundFreeDate === FoundDateStatus.PendingNotFound) {
+            foundDateState.saveState(seatCategory, FoundDateStatus.Found);
+            continue;
+          }
 
           // Found dates. Send to chat and broadcast
           const msg = `${categoryName} found seats: ${avDatesStr}. Go to ${loginPageUrl} to try to reserve a seat`;
