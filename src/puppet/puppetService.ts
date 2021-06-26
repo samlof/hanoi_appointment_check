@@ -372,7 +372,10 @@ export class PuppetService {
     ) {
       throw new Error("Invalid url for checking calendar days");
     }
-    await page.reload({ timeout: waitForNavigationTimeout });
+    await page.reload({
+      timeout: waitForNavigationTimeout,
+      waitUntil: "networkidle2",
+    });
     if (
       page.url() !==
       "https://online.vfsglobal.com/FinlandAppt/Calendar/FinalCalendar"
@@ -390,8 +393,8 @@ export class PuppetService {
       // ret.images.push(calendarPic);
     }
 
+    await page.waitForTimeout(1 * 1000);
     await page.click(".fc-header-right .fc-button");
-    await page.waitForTimeout(3 * 1000);
 
     avdays = await this.checkCalendarElement(page);
     if (avdays) {

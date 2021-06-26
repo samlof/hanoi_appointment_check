@@ -246,6 +246,8 @@ async function reserveTesting() {
   };
   await puppet.Login(page, "steve@protonmail.com", "rY#Ks#$r95H6dyn");
   await puppet.GotoCalendarPage(page, info, SeatCategory.RPStudent);
+
+  await puppet.CheckCalendarDays(page);
 }
 
 if (!process.env.TEST_ENV) {
