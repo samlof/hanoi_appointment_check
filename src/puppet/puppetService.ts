@@ -393,7 +393,14 @@ export class PuppetService {
       // ret.images.push(calendarPic);
     }
 
-    await page.waitForTimeout(1 * 1000);
+    try {
+      await page.waitForSelector(".fc-header-right .fc-button", {
+        timeout: 15 * 1000,
+      });
+    } catch (error) {
+      // Ignore error
+    }
+
     await page.click(".fc-header-right .fc-button");
 
     avdays = await this.checkCalendarElement(page);
@@ -405,6 +412,13 @@ export class PuppetService {
       // ret.images.push(calendarPic);
     }
 
+    try {
+      await page.waitForSelector(".fc-header-right .fc-button", {
+        timeout: 15 * 1000,
+      });
+    } catch (error) {
+      // Ignore error
+    }
     await page.click(".fc-header-right .fc-button");
     await page.waitForTimeout(3 * 1000);
 
