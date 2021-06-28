@@ -395,13 +395,19 @@ export class PuppetService {
 
     try {
       await page.waitForSelector(".fc-header-right .fc-button", {
-        timeout: 15 * 1000,
+        timeout: 30 * 1000,
       });
     } catch (error) {
       // Ignore error
     }
 
-    await page.click(".fc-header-right .fc-button");
+    try {
+      await page.click(".fc-header-right .fc-button");
+    } catch (error) {
+      const sc = await page.screenshot();
+      if (sc) this.telegrafService.sendImageMe(sc);
+      throw error;
+    }
 
     avdays = await this.checkCalendarElement(page);
     if (avdays) {
@@ -414,7 +420,7 @@ export class PuppetService {
 
     try {
       await page.waitForSelector(".fc-header-right .fc-button", {
-        timeout: 15 * 1000,
+        timeout: 30 * 1000,
       });
     } catch (error) {
       // Ignore error
