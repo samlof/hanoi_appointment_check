@@ -16,7 +16,6 @@ import { TelegrafService } from "./telegram/telegrafService";
 import { utils } from "./utils";
 
 import { version } from "../package.json";
-import { FoundDateState, FoundDateStatus } from "./foundDateState";
 
 async function main() {
   require("events").defaultMaxListeners = 20;
@@ -30,6 +29,11 @@ async function main() {
   checkSeatsCalendar(SeatCategory.RPWork, "WORK");
   checkSeatsCalendar(SeatCategory.Visa, "SCHENGEN VISA");
 }
+enum FoundDateStatus {
+  NotFound,
+  Found,
+  PendingNotFound,
+}
 
 async function checkSeatsCalendar(
   seatCategory: SeatCategory,
@@ -39,9 +43,9 @@ async function checkSeatsCalendar(
   logger.init(`checkSeatsCalendar ${categoryName}`);
   const telegrafService = container.get(TelegrafService);
   const puppet = container.get(PuppetService);
-  const foundDateState = container.get(FoundDateState);
 
   logger.log("Running checkSeatsCalendar");
+  let foundFreeDate: FoundDateStatus = FoundDateStatus.PendingNotFound;
 
   while (true) {
     logger.log("Opening browser");
@@ -81,7 +85,6 @@ async function checkSeatsCalendar(
         const avDates = await puppet.CheckCalendarDays(page);
         let logMsg = `Found ${avDates?.dates.length} available dates`;
 
-        const foundFreeDate = await foundDateState.getState(categoryName);
         if (avDates?.dates.length > 0) {
           const avDatesStr = avDates.dates.join(",");
           logMsg += ". " + avDatesStr;
@@ -93,7 +96,7 @@ async function checkSeatsCalendar(
           }
           // Check if found free date is pending not found. Then reset it and return
           if (foundFreeDate === FoundDateStatus.PendingNotFound) {
-            foundDateState.saveState(seatCategory, FoundDateStatus.Found);
+            foundFreeDate = FoundDateStatus.Found;
             continue;
           }
 
@@ -110,13 +113,10 @@ async function checkSeatsCalendar(
           }
           // Pending state since sometimes there are still slots but this says there aren't
           if (foundFreeDate !== FoundDateStatus.PendingNotFound) {
-            foundDateState.saveState(
-              seatCategory,
-              FoundDateStatus.PendingNotFound
-            );
+            foundFreeDate = FoundDateStatus.PendingNotFound;
             continue;
           }
-          foundDateState.saveState(seatCategory, FoundDateStatus.NotFound);
+          foundFreeDate = FoundDateStatus.NotFound;
 
           // No seats available. Send a message telling that
           const msg = `${categoryName} seats stopped being available`;
