@@ -14,7 +14,7 @@ import { Country } from "../countries";
 import { Logger } from "../logger";
 import * as options from "../options";
 import { TelegrafService } from "../telegram/telegrafService";
-import { utils } from "../utils";
+import { shuffleArray, utils } from "../utils";
 
 puppeteer.use(StealthPlugin());
 puppeteer.use(Adblocker({ blockTrackers: true }));
@@ -584,7 +584,7 @@ export class PuppetService {
   public async getBrowser(
     datadir: string | undefined = undefined
   ): Promise<[Browser, Page]> {
-    this.proxyUrl = proxyList.pop();
+    //this.proxyUrl = proxyList.pop();
     const browserArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
     if (this.proxyUrl) browserArgs.push(`--proxy-server=${this.proxyUrl}`);
 
@@ -649,6 +649,7 @@ const proxyList = [
   "https://at107.nordvpn.com:89",
   "https://at125.nordvpn.com:89",
 ];
+shuffleArray(proxyList);
 
 export interface AccountInfo {
   FirstName: string;
