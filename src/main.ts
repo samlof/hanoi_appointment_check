@@ -45,7 +45,7 @@ async function checkSeatsCalendar(
   const puppet = container.get(PuppetService);
 
   logger.log("Running checkSeatsCalendar");
-  let foundFreeDate: FoundDateStatus = FoundDateStatus.PendingNotFound;
+  let foundFreeDate: FoundDateStatus = FoundDateStatus.NotFound;
 
   while (true) {
     logger.log("Opening browser");
