@@ -99,6 +99,7 @@ async function checkSeatsCalendar(
             foundFreeDate = FoundDateStatus.Found;
             continue;
           }
+          foundFreeDate = FoundDateStatus.Found;
 
           // Found dates. Send to chat and broadcast
           const msg = `${categoryName} found seats: ${avDatesStr}. Go to ${loginPageUrl} to try to reserve a seat`;
