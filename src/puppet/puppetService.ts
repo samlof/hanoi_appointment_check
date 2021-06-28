@@ -20,6 +20,9 @@ puppeteer.use(StealthPlugin());
 puppeteer.use(Adblocker({ blockTrackers: true }));
 puppeteer.use(AnonymizeUaPlugin());
 
+const NordVpnUsername = process.env.NORDVPN_USERNAME;
+const NordVpnPassword = process.env.NORDVPN_PASSWORD;
+
 export const loginPageUrl =
   "https://online.vfsglobal.com/FinlandAppt/Account/RegisteredLogin?q=shSA0YnE4pLF9Xzwon/x/FXkgptUe6eKckueax3hilyMCJeF9rpsVy6pNcXQaW1lGwqZ09Q3CAT0LslshZBx5g==";
 const registerPageUrl =
@@ -39,6 +42,7 @@ export class PuppetService {
 
   foundFreeDate = false;
   imagesSent = false;
+  proxyUrl?: string;
 
   /**
    * @param {string} email
@@ -580,11 +584,15 @@ export class PuppetService {
   public async getBrowser(
     datadir: string | undefined = undefined
   ): Promise<[Browser, Page]> {
+    this.proxyUrl = proxyList.pop();
+    const browserArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
+    if (this.proxyUrl) browserArgs.push(`--proxy-server=${this.proxyUrl}`);
+
     const browser = await puppeteer.launch({
       // @ts-ignore because types are wrong
       headless: options.puppeteer.headless,
 
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: browserArgs,
       ignoreHTTPSErrors: true,
       executablePath: options.puppeteer.executablePath,
       userDataDir: datadir,
@@ -593,9 +601,54 @@ export class PuppetService {
     // Adjustments particular to this page to ensure we hit desktop breakpoint.
     await page.setViewport({ width: 1000, height: 600, deviceScaleFactor: 1 });
 
+    if (this.proxyUrl) {
+      if (!NordVpnUsername || !NordVpnPassword) {
+        throw Error(
+          "NordVpn envs NORDVPN_USERNAME and NORDVPN_PASSWORD not set"
+        );
+      }
+      await page.authenticate({
+        username: NordVpnUsername,
+        password: NordVpnPassword,
+      });
+    }
+
     return [browser, page];
   }
+
+  public async closeBrowser(browser: Browser, page: Page): Promise<void> {
+    if (this.proxyUrl) {
+      proxyList.unshift(this.proxyUrl);
+      this.proxyUrl = undefined;
+    }
+
+    page.removeAllListeners();
+    browser.removeAllListeners();
+    await page.close();
+    await browser.close();
+  }
 }
+const proxyList = [
+  "https://fi146.nordvpn.com:89",
+  "https://fi155.nordvpn.com:89",
+  "https://fi164.nordvpn.com:89",
+  "https://fi170.nordvpn.com:89",
+
+  "https://de695.nordvpn.com:89",
+  "https://de863.nordvpn.com:89",
+  "https://de885.nordvpn.com:89",
+  "https://de952.nordvpn.com:89",
+
+  "https://se391.nordvpn.com:89",
+  "https://se418.nordvpn.com:89",
+  "https://se423.nordvpn.com:89",
+
+  "https://be188.nordvpn.com:89",
+  "https://be192.nordvpn.com:89",
+
+  "https://at107.nordvpn.com:89",
+  "https://at125.nordvpn.com:89",
+];
 
 export interface AccountInfo {
   FirstName: string;

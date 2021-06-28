@@ -174,9 +174,7 @@ async function checkSeatsCalendar(
       }
     } finally {
       logger.log("Removing listeners and closing browser");
-      page.removeAllListeners();
-      browser.removeAllListeners();
-      page.close().then(() => browser.close());
+      puppet.closeBrowser(browser, page);
     }
   }
 }
