@@ -586,7 +586,10 @@ export class PuppetService {
   ): Promise<[Browser, Page]> {
     //this.proxyUrl = proxyList.pop();
     const browserArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
-    if (this.proxyUrl) browserArgs.push(`--proxy-server=${this.proxyUrl}`);
+    if (this.proxyUrl) {
+      this.logger.log("Activating proxy");
+      browserArgs.push(`--proxy-server=${this.proxyUrl}`);
+    }
 
     const browser = await puppeteer.launch({
       // @ts-ignore because types are wrong
