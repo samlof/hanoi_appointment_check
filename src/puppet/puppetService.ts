@@ -584,7 +584,7 @@ export class PuppetService {
   public async getBrowser(
     datadir: string | undefined = undefined
   ): Promise<[Browser, Page]> {
-    //this.proxyUrl = proxyList.pop();
+    this.proxyUrl = proxyList.pop();
     const browserArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
     if (this.proxyUrl) {
       this.logger.log("Activating proxy");
