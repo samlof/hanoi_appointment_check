@@ -627,7 +627,6 @@ export class PuppetService {
 
   public async closeBrowser(browser: Browser, page: Page): Promise<void> {
     if (this.proxyUrl) {
-      returnProxy(this.proxyUrl);
       this.proxyUrl = undefined;
     }
 

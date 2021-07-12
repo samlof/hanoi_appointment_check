@@ -17,7 +17,7 @@ import { TelegrafService } from "./telegram/telegrafService";
 import { utils } from "./utils";
 
 import { version } from "../package.json";
-import { getProxy } from "./proxy/proxyList";
+import { getProxy, returnProxy } from "./proxy/proxyList";
 import { nordvpnProxyList } from "./proxy/nordvpn";
 
 async function main() {
@@ -52,7 +52,8 @@ async function checkSeatsCalendar(
 
   while (true) {
     logger.log("Opening browser");
-    const [browser, page] = await puppet.getBrowser();
+    const proxyAddr = await getProxy();
+    const [browser, page] = await puppet.getBrowser(undefined, proxyAddr);
     try {
       // Make new account
       const fakePerson = makeFakePerson();
@@ -178,6 +179,7 @@ async function checkSeatsCalendar(
     } finally {
       logger.log("Removing listeners and closing browser");
       puppet.closeBrowser(browser, page);
+      returnProxy(proxyAddr);
     }
   }
 }
