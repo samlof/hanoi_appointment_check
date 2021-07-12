@@ -15,7 +15,7 @@ import { Logger } from "../logger";
 import * as options from "../options";
 import { TelegrafService } from "../telegram/telegrafService";
 import { utils } from "../utils";
-import { getProxy, returnProxy } from "./proxyList";
+import { getProxy, returnProxy } from "../proxy/proxyList";
 
 puppeteer.use(StealthPlugin());
 puppeteer.use(Adblocker({ blockTrackers: true }));

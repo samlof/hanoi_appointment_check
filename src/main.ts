@@ -17,7 +17,7 @@ import { TelegrafService } from "./telegram/telegrafService";
 import { utils } from "./utils";
 
 import { version } from "../package.json";
-import { getProxy } from "./puppet/proxyList";
+import { getProxy } from "./proxy/proxyList";
 
 async function main() {
   require("events").defaultMaxListeners = 20;

@@ -1,5 +1,7 @@
 import { utils } from "../utils";
+import { nordvpnProxyList } from "./nordvpn";
 
+const proxyList = nordvpnProxyList.slice(0, 20);
 /**
  * Get a proxy from pool of usable ones
  * @returns Proxy url
@@ -37,13 +39,3 @@ function nordvpnProxies(): string[] {
   }
   return proxies;
 }
-
-const proxyList = [
-  "https://de984.nordvpn.com:89",
-  "https://de983.nordvpn.com:89",
-  "https://de982.nordvpn.com:89",
-  "https://de981.nordvpn.com:89",
-  "https://de980.nordvpn.com:89",
-  "https://de979.nordvpn.com:89",
-  "https://de978.nordvpn.com:89",
-];
