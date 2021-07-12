@@ -28,6 +28,9 @@ const registerPageUrl =
 
 const waitForNavigationTimeout = 5 * 60 * 1000;
 
+const NordVpnUsername = process.env.NORDVPN_USERNAME;
+const NordVpnPassword = process.env.NORDVPN_PASSWORD;
+
 @injectable()
 export class PuppetService {
   constructor(
@@ -580,13 +583,14 @@ export class PuppetService {
    * @returns puppeteer browser and page
    */
   public async getBrowser(
-    datadir: string | undefined = undefined
+    datadir: string | undefined = undefined,
+    proxy: string | undefined = undefined
   ): Promise<[Browser, Page]> {
     const browserArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
-    this.proxyUrl = await getProxy();
+    this.proxyUrl = proxy || (await getProxy());
     if (this.proxyUrl) {
       this.logger.log("Activating proxy");
-      browserArgs.push(`--proxy-server=${this.proxyUrl}`);
+      browserArgs.push(`--proxy-server=` + proxy);
     }
 
     const browser = await puppeteer.launch({
@@ -601,6 +605,19 @@ export class PuppetService {
     const page = await browser.newPage();
     // Adjustments particular to this page to ensure we hit desktop breakpoint.
     await page.setViewport({ width: 1000, height: 600, deviceScaleFactor: 1 });
+
+    // Authenticate proxy
+    if (this.proxyUrl && this.proxyUrl.includes("nordvpn")) {
+      if (!NordVpnUsername || !NordVpnPassword) {
+        throw Error(
+          "NordVpn envs NORDVPN_USERNAME and NORDVPN_PASSWORD not set"
+        );
+      }
+      await page.authenticate({
+        username: NordVpnUsername,
+        password: NordVpnPassword,
+      });
+    }
 
     return [browser, page];
   }

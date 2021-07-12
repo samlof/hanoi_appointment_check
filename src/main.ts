@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import faker from "faker";
+import fs from "fs/promises";
 import passwordGen from "secure-random-password";
 import { Country } from "./countries";
 import { container } from "./inversify.config";
@@ -250,6 +251,28 @@ async function reserveTesting() {
   await puppet.CheckCalendarDays(page);
 }
 
+/**
+ * Helper to find working proxies
+ */
+async function collectProxyList() {
+  const puppet = container.get(PuppetService);
+  while (true) {
+    const p = await getProxy();
+    const [b, page] = await puppet.getBrowser(undefined, p);
+    try {
+      await page.goto(loginPageUrl);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+      fs.appendFile("proxy_bad.txt", p + "\n");
+      continue;
+    } finally {
+      await b.close();
+    }
+    fs.appendFile("proxy_good.txt", p + "\n");
+  }
+}
+
 if (!process.env.TEST_ENV) {
   // eslint-disable-next-line no-console
   console.log(utils.getTimestamp() + "Starting in server mode. Running main");
@@ -259,7 +282,8 @@ if (!process.env.TEST_ENV) {
   console.log(utils.getTimestamp() + "Starting in test mode");
 
   // eslint-disable-next-line no-console
-  console.log(getProxy());
-  //reserveTesting();
+
+  reserveTesting();
+  //collectProxyList();
   //main();
 }
