@@ -6,22 +6,20 @@ import Adblocker from "puppeteer-extra-plugin-adblocker";
 import AnonymizeUaPlugin from "puppeteer-extra-plugin-anonymize-ua";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import {
+  AntiCaptchaService,
   Captcha,
   captchaFolder,
-  AntiCaptchaService,
 } from "../captcha/anticaptcha/antiCaptchaService";
 import { Country } from "../countries";
 import { Logger } from "../logger";
 import * as options from "../options";
 import { TelegrafService } from "../telegram/telegrafService";
-import { shuffleArray, utils } from "../utils";
+import { utils } from "../utils";
+import { getProxy, returnProxy } from "./proxyList";
 
 puppeteer.use(StealthPlugin());
 puppeteer.use(Adblocker({ blockTrackers: true }));
 puppeteer.use(AnonymizeUaPlugin());
-
-const NordVpnUsername = process.env.NORDVPN_USERNAME;
-const NordVpnPassword = process.env.NORDVPN_PASSWORD;
 
 export const loginPageUrl =
   "https://online.vfsglobal.com/FinlandAppt/Account/RegisteredLogin?q=shSA0YnE4pLF9Xzwon/x/FXkgptUe6eKckueax3hilyMCJeF9rpsVy6pNcXQaW1lGwqZ09Q3CAT0LslshZBx5g==";
@@ -584,8 +582,8 @@ export class PuppetService {
   public async getBrowser(
     datadir: string | undefined = undefined
   ): Promise<[Browser, Page]> {
-    this.proxyUrl = proxyList.pop();
     const browserArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
+    this.proxyUrl = await getProxy();
     if (this.proxyUrl) {
       this.logger.log("Activating proxy");
       browserArgs.push(`--proxy-server=${this.proxyUrl}`);
@@ -604,24 +602,12 @@ export class PuppetService {
     // Adjustments particular to this page to ensure we hit desktop breakpoint.
     await page.setViewport({ width: 1000, height: 600, deviceScaleFactor: 1 });
 
-    if (this.proxyUrl) {
-      if (!NordVpnUsername || !NordVpnPassword) {
-        throw Error(
-          "NordVpn envs NORDVPN_USERNAME and NORDVPN_PASSWORD not set"
-        );
-      }
-      await page.authenticate({
-        username: NordVpnUsername,
-        password: NordVpnPassword,
-      });
-    }
-
     return [browser, page];
   }
 
   public async closeBrowser(browser: Browser, page: Page): Promise<void> {
     if (this.proxyUrl) {
-      proxyList.unshift(this.proxyUrl);
+      returnProxy(this.proxyUrl);
       this.proxyUrl = undefined;
     }
 
@@ -631,28 +617,6 @@ export class PuppetService {
     await browser.close();
   }
 }
-const proxyList = [
-  "https://fi146.nordvpn.com:89",
-  "https://fi155.nordvpn.com:89",
-  "https://fi164.nordvpn.com:89",
-  "https://fi170.nordvpn.com:89",
-
-  "https://de695.nordvpn.com:89",
-  "https://de863.nordvpn.com:89",
-  "https://de885.nordvpn.com:89",
-  "https://de952.nordvpn.com:89",
-
-  "https://se391.nordvpn.com:89",
-  "https://se418.nordvpn.com:89",
-  "https://se423.nordvpn.com:89",
-
-  "https://be188.nordvpn.com:89",
-  "https://be192.nordvpn.com:89",
-
-  "https://at107.nordvpn.com:89",
-  "https://at125.nordvpn.com:89",
-];
-shuffleArray(proxyList);
 
 export interface AccountInfo {
   FirstName: string;

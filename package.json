@@ -1,6 +1,6 @@
 {
   "name": "hanoi_appointment",
-  "version": "0.1.43",
+  "version": "0.1.44",
   "description": "A bot to check Finnish Embassy in Vietnam's available slots for appointments",
   "main": "dist/main.js",
   "scripts": {
@@ -19,6 +19,7 @@
     "form-data": "^4.0.0",
     "inversify": "^5.1.1",
     "node-fetch": "^2.6.1",
+    "proxy-lists": "^1.23.2",
     "puppeteer": "^8.0.0",
     "puppeteer-extra": "^3.1.18",
     "puppeteer-extra-plugin-adblocker": "^2.11.11",
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@types/faker": "^5.5.6",
     "@types/node-fetch": "^2.5.10",
+    "@types/proxy-lists": "^1.14.2",
     "@types/secure-random-password": "^0.2.0",
     "@typescript-eslint/eslint-plugin": "^4.26.1",
     "@typescript-eslint/parser": "^4.26.1",

@@ -16,6 +16,7 @@ import { TelegrafService } from "./telegram/telegrafService";
 import { utils } from "./utils";
 
 import { version } from "../package.json";
+import { getProxy } from "./puppet/proxyList";
 
 async function main() {
   require("events").defaultMaxListeners = 20;
@@ -257,6 +258,8 @@ if (!process.env.TEST_ENV) {
   // eslint-disable-next-line no-console
   console.log(utils.getTimestamp() + "Starting in test mode");
 
-  reserveTesting();
+  // eslint-disable-next-line no-console
+  console.log(getProxy());
+  //reserveTesting();
   //main();
 }
