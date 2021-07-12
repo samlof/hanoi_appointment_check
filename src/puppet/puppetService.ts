@@ -587,7 +587,10 @@ export class PuppetService {
     proxy: string | undefined = undefined
   ): Promise<[Browser, Page]> {
     const browserArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
-    this.proxyUrl = proxy || (await getProxy());
+    this.proxyUrl = proxy;
+    if (!this.proxyUrl) {
+      this.proxyUrl = await getProxy();
+    }
     if (this.proxyUrl) {
       this.logger.log("Activating proxy");
       browserArgs.push(`--proxy-server=` + proxy);
@@ -607,7 +610,7 @@ export class PuppetService {
     await page.setViewport({ width: 1000, height: 600, deviceScaleFactor: 1 });
 
     // Authenticate proxy
-    if (this.proxyUrl && this.proxyUrl.includes("nordvpn")) {
+    if (this.proxyUrl) {
       if (!NordVpnUsername || !NordVpnPassword) {
         throw Error(
           "NordVpn envs NORDVPN_USERNAME and NORDVPN_PASSWORD not set"

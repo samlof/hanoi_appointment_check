@@ -18,6 +18,7 @@ import { utils } from "./utils";
 
 import { version } from "../package.json";
 import { getProxy } from "./proxy/proxyList";
+import { nordvpnProxyList } from "./proxy/nordvpn";
 
 async function main() {
   require("events").defaultMaxListeners = 20;
@@ -231,7 +232,7 @@ async function reserveTesting() {
   // await makeAccount(true);
   //telegrafService.sendImageChat("calendar1.png");
 
-  const [, page] = await puppet.getBrowser();
+  const [b, page] = await puppet.getBrowser(undefined, await getProxy());
 
   const info: ApplicantInfo = {
     Email: "Gardner12@gmail.com",
@@ -245,10 +246,12 @@ async function reserveTesting() {
     Gender: Gender.Male,
     Nationality: Country.VIETNAM,
   };
-  await puppet.Login(page, "steve@protonmail.com", "rY#Ks#$r95H6dyn");
-  await puppet.GotoCalendarPage(page, info, SeatCategory.RPStudent);
+  await page.goto(loginPageUrl);
+  b.close();
+  // await puppet.Login(page, "steve@protonmail.com", "rY#Ks#$r95H6dyn");
+  // await puppet.GotoCalendarPage(page, info, SeatCategory.RPStudent);
 
-  await puppet.CheckCalendarDays(page);
+  // await puppet.CheckCalendarDays(page);
 }
 
 /**
@@ -256,20 +259,22 @@ async function reserveTesting() {
  */
 async function collectProxyList() {
   const puppet = container.get(PuppetService);
-  while (true) {
-    const p = await getProxy();
+  for (let p of nordvpnProxyList) {
+    p = "https://de852.nordvpn.com:89";
     const [b, page] = await puppet.getBrowser(undefined, p);
     try {
       await page.goto(loginPageUrl);
     } catch (error) {
-      // eslint-disable-next-line no-console
+      console.log(`Proxy ${p} didn't worked`);
       console.log(error);
-      fs.appendFile("proxy_bad.txt", p + "\n");
-      continue;
+      //fs.appendFile("proxy_bad.txt", p + "\n");
+      return;
     } finally {
-      await b.close();
+      b.close();
     }
-    fs.appendFile("proxy_good.txt", p + "\n");
+    console.log(`Proxy ${p} worked`);
+    return;
+    //fs.appendFile("proxy_good.txt", p + "\n");
   }
 }
 

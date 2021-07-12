@@ -1,7 +1,7 @@
 import { utils } from "../utils";
 import { nordvpnProxyList } from "./nordvpn";
 
-const proxyList = nordvpnProxyList.slice(0, 20);
+const proxyList = nordvpnProxyList.slice(0, 10);
 /**
  * Get a proxy from pool of usable ones
  * @returns Proxy url

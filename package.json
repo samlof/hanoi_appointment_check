@@ -1,11 +1,11 @@
 {
   "name": "hanoi_appointment",
-  "version": "0.1.47",
+  "version": "0.1.48",
   "description": "A bot to check Finnish Embassy in Vietnam's available slots for appointments",
   "main": "dist/main.js",
   "scripts": {
-    "start": "tsc && node --trace-warnings dist/src/main.js",
-    "build": "tsc --build --clean && tsc",
+    "start": "rimraf dist/ && tsc && node --trace-warnings dist/src/main.js",
+    "build": "rimraf dist/ && tsc",
     "lint": "eslint . --ext .ts",
     "prepare": "husky install"
   },
@@ -26,6 +26,7 @@
     "puppeteer-extra-plugin-stealth": "^2.7.8",
     "rate-limiter-flexible": "^2.2.2",
     "reflect-metadata": "^0.1.13",
+    "rimraf": "^3.0.2",
     "secure-random-password": "^0.2.3",
     "telegraf": "^4.3.0"
   },
