@@ -19,7 +19,7 @@ export async function getProxy(): Promise<string> {
  * @param p Proxy url
  */
 export function returnProxy(p: string): void {
-  proxyList.push(p);
+  if (!proxyList.includes(p)) proxyList.push(p);
 }
 
 /**

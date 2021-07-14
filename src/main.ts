@@ -1,11 +1,12 @@
 import dotenv from "dotenv";
-dotenv.config();
 import faker from "faker";
-import fs from "fs/promises";
 import passwordGen from "secure-random-password";
+import { version } from "../package.json";
 import { Country } from "./countries";
 import { container } from "./inversify.config";
 import { Logger } from "./logger";
+import { nordvpnProxyList } from "./proxy/nordvpn";
+import { getProxy } from "./proxy/proxyList";
 import {
   ApplicantInfo,
   Gender,
@@ -15,10 +16,7 @@ import {
 } from "./puppet/puppetService";
 import { TelegrafService } from "./telegram/telegrafService";
 import { utils } from "./utils";
-
-import { version } from "../package.json";
-import { getProxy, returnProxy } from "./proxy/proxyList";
-import { nordvpnProxyList } from "./proxy/nordvpn";
+dotenv.config();
 
 async function main() {
   require("events").defaultMaxListeners = 20;
@@ -52,8 +50,7 @@ async function checkSeatsCalendar(
 
   while (true) {
     logger.log("Opening browser");
-    const proxyAddr = await getProxy();
-    const [browser, page] = await puppet.getBrowser(undefined, proxyAddr);
+    const [browser, page] = await puppet.getBrowser();
     try {
       // Make new account
       const fakePerson = makeFakePerson();
@@ -179,7 +176,6 @@ async function checkSeatsCalendar(
     } finally {
       logger.log("Removing listeners and closing browser");
       puppet.closeBrowser(browser, page);
-      returnProxy(proxyAddr);
     }
   }
 }

@@ -30,6 +30,7 @@ const waitForNavigationTimeout = 5 * 60 * 1000;
 
 const NordVpnUsername = process.env.NORDVPN_USERNAME;
 const NordVpnPassword = process.env.NORDVPN_PASSWORD;
+const UseProxy = !!process.env.USE_PROXY;
 
 @injectable()
 export class PuppetService {
@@ -586,7 +587,7 @@ export class PuppetService {
     datadir: string | undefined = undefined,
     proxy: string | undefined = undefined
   ): Promise<[Browser, Page]> {
-    if (!proxy) {
+    if (!proxy && UseProxy) {
       proxy = await getProxy();
     }
     const browserArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
