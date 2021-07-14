@@ -467,7 +467,7 @@ export class PuppetService {
     backgroundStyles = backgroundStyles.filter((x) => x.bg !== "");
     // Filter white
     backgroundStyles = backgroundStyles.filter(
-      (x) => x.bg !== "rgb(255, 255, 255)"
+      (x) => x.bg !== "rgb(255, 255, 255)" && x.bg !== "white"
     );
     // Filter holidays
     backgroundStyles = backgroundStyles.filter(
@@ -586,14 +586,14 @@ export class PuppetService {
     datadir: string | undefined = undefined,
     proxy: string | undefined = undefined
   ): Promise<[Browser, Page]> {
+    if (!proxy) {
+      proxy = await getProxy();
+    }
     const browserArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
     this.proxyUrl = proxy;
-    if (!this.proxyUrl) {
-      this.proxyUrl = await getProxy();
-    }
     if (this.proxyUrl) {
       this.logger.log("Activating proxy");
-      browserArgs.push(`--proxy-server=` + proxy);
+      browserArgs.push(`--proxy-server=` + this.proxyUrl);
     }
 
     const browser = await puppeteer.launch({
@@ -627,6 +627,7 @@ export class PuppetService {
 
   public async closeBrowser(browser: Browser, page: Page): Promise<void> {
     if (this.proxyUrl) {
+      returnProxy(this.proxyUrl);
       this.proxyUrl = undefined;
     }
 
