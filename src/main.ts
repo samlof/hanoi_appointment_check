@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+dotenv.config();
 import faker from "faker";
 import passwordGen from "secure-random-password";
 import { version } from "../package.json";
@@ -16,7 +17,6 @@ import {
 } from "./puppet/puppetService";
 import { TelegrafService } from "./telegram/telegrafService";
 import { utils } from "./utils";
-dotenv.config();
 
 async function main() {
   require("events").defaultMaxListeners = 20;
