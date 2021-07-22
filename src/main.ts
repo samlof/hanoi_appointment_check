@@ -29,6 +29,7 @@ async function main() {
   checkSeatsCalendar(SeatCategory.RPStudent, "STUDENT");
   checkSeatsCalendar(SeatCategory.RPWork, "WORK");
   checkSeatsCalendar(SeatCategory.Visa, "SCHENGEN VISA");
+  checkSeatsCalendar(SeatCategory.Legalization, "LEGALIZATION");
 }
 enum FoundDateStatus {
   NotFound,
