@@ -145,7 +145,7 @@ export class PuppetService {
     accountInfo: AccountInfo
   ): Promise<void> {
     await page.goto(loginPageUrl);
-    await utils.sleep(1000);
+    await page.waitForTimeout(1000);
 
     await Promise.all([
       page.waitForNavigation({ timeout: waitForNavigationTimeout }),
@@ -156,49 +156,53 @@ export class PuppetService {
     const filename = `${captchaFolder}/registerCaptcha${Date.now()}.png`;
     const el = await page.$("#CaptchaImage");
     await el?.screenshot({ path: filename });
+    const captchaPromise = this.captchaService.solveCaptcha(filename);
 
-    await page.$eval(
-      "#FirstName",
-      // @ts-ignore because it's input
-      (el, FirstName) => (el.value = FirstName),
-      accountInfo.FirstName
-    );
-    await page.$eval(
-      "#LastName",
-      // @ts-ignore because it's input
-      (el, LastName) => (el.value = LastName),
-      accountInfo.LastName
-    );
+    // await page.$eval(
+    //   "#FirstName",
+    //   // @ts-ignore because it's input
+    //   (el, FirstName) => (el.value = FirstName),
+    //   accountInfo.FirstName
+    // );
+    // await page.$eval(
+    //   "#LastName",
+    //   // @ts-ignore because it's input
+    //   (el, LastName) => (el.value = LastName),
+    //   accountInfo.LastName
+    // );
     await page.$eval(
       "#validateEmailId",
       // @ts-ignore because it's input
       (el, validateEmailId) => (el.value = validateEmailId),
       accountInfo.Email
     );
-    await page.$eval(
-      "#ContactNo",
-      // @ts-ignore because it's input
-      (el, ContactNo) => (el.value = ContactNo),
-      accountInfo.PhoneNumber
-    );
+    await page.waitForTimeout(1000);
+    // await page.$eval(
+    //   "#ContactNo",
+    //   // @ts-ignore because it's input
+    //   (el, ContactNo) => (el.value = ContactNo),
+    //   accountInfo.PhoneNumber
+    // );
     await page.$eval(
       "#Password",
       // @ts-ignore because it's input
       (el, Password) => (el.value = Password),
       accountInfo.Password
     );
+    await page.waitForTimeout(1000);
     await page.$eval(
       "#ConfirmPassword",
       // @ts-ignore because it's input
       (el, ConfirmPassword) => (el.value = ConfirmPassword),
       accountInfo.Password
     );
+    await page.waitForTimeout(1000);
 
     await page.click("#IsChecked");
     await page.waitForTimeout(500);
     await page.click("span.ui-button-icon-primary.ui-icon.ui-icon-closethick");
 
-    let captcha = await this.captchaService.solveCaptcha(filename);
+    let captcha = await captchaPromise;
     for (let i = 0; i < 5 && !captcha; i++) {
       await utils.sleep(5000);
       captcha = await this.captchaService.solveCaptcha(filename);
@@ -294,6 +298,7 @@ export class PuppetService {
     info: ApplicantInfo,
     seatCategory: SeatCategory
   ): Promise<void> {
+    this.logger.info("Running GotoCalendarPage");
     if (page.url() !== this.loginHomePageUrl) {
       await page.goto(this.loginHomePageUrl);
     }
@@ -302,7 +307,7 @@ export class PuppetService {
     }
 
     const linkHandlers = await page.$x(
-      "//a[contains(text(), 'Schedule Appointment')]"
+      "//a[contains(text(), 'Schedule appointment')]"
     );
     if (linkHandlers.length === 0) {
       throw new Error(
@@ -329,8 +334,12 @@ export class PuppetService {
     // if (locError?.includes("There are no open seats")) {
     //   throw new Error( "no open seats");
     // }
-    await page.select("#VisaCategoryId", seatCategory);
-    await page.waitForTimeout(500);
+    await Promise.all([
+      page.select("#VisaCategoryId", seatCategory),
+      page.waitForNavigation({ timeout: waitForNavigationTimeout }),
+    ]);
+    // await page.select("#VisaCategoryId", seatCategory);
+    // await page.waitForTimeout(500);
 
     // Debug code to bypass no seats available
     await page.$eval(
@@ -527,12 +536,12 @@ export class PuppetService {
       (el, DateOfBirth) => (el.value = DateOfBirth),
       info.DateOfBirth
     );
-    await page.$eval(
-      "#PassportExpiryDate",
-      // @ts-ignore because it's input
-      (el, PassportExpirt) => (el.value = PassportExpirt),
-      info.PassportExpirt
-    );
+    // await page.$eval(
+    //   "#PassportExpiryDate",
+    //   // @ts-ignore because it's input
+    //   (el, PassportExpirt) => (el.value = PassportExpirt),
+    //   info.PassportExpirt
+    // );
 
     // Do nationality
     await page.select("#NationalityId", info.Nationality);
@@ -551,7 +560,7 @@ export class PuppetService {
     );
 
     // Do gender
-    await page.select("#GenderId", info.Gender);
+    // await page.select("#GenderId", info.Gender);
 
     await page.$eval(
       "#DialCode",

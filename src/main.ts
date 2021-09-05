@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable no-console */
 import dotenv from "dotenv";
 dotenv.config();
 import faker from "faker";
@@ -9,6 +11,7 @@ import { Logger } from "./logger";
 import { nordvpnProxyList } from "./proxy/nordvpn";
 import { getProxy } from "./proxy/proxyList";
 import {
+  AccountInfo,
   ApplicantInfo,
   Gender,
   loginPageUrl,
@@ -225,16 +228,22 @@ async function makeAccount(): Promise<[string, string] | undefined> {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function reserveTesting() {
   const puppet = container.get(PuppetService);
-  // "Gardner12@gmail.com","UW%s4cjLVeP",
-  // "steve@protonmail.com", "rY#Ks#$r95H6dyn",
-  // "Faustino_Mann@yahoo.com", "wjPe$g7?Xax",
-  // await makeAccount(true);
-  //telegrafService.sendImageChat("calendar1.png");
 
   const [b, page] = await puppet.getBrowser(undefined, await getProxy());
 
+  const email = "Gardner12@gmail.com";
+  const accountInfo: AccountInfo = {
+    Email: email,
+
+    FirstName: "Gardner",
+    LastName: "Ner",
+
+    PhoneNumber: "123125123",
+    Password: "rY#Ks#$r95H6dy",
+  };
+
   const info: ApplicantInfo = {
-    Email: "Gardner12@gmail.com",
+    Email: email,
     ContactNumber: "123125123",
     PassportExpirt: "05/02/2022",
     LastName: "Ner",
@@ -245,12 +254,14 @@ async function reserveTesting() {
     Gender: Gender.Male,
     Nationality: Country.VIETNAM,
   };
-  await page.goto(loginPageUrl);
-  b.close();
-  // await puppet.Login(page, "steve@protonmail.com", "rY#Ks#$r95H6dyn");
-  // await puppet.GotoCalendarPage(page, info, SeatCategory.RPStudent);
+  // await puppet.makeNewAccount(page, accountInfo);
 
-  // await puppet.CheckCalendarDays(page);
+  await puppet.Login(page, accountInfo.Email, accountInfo.Password);
+  await puppet.GotoCalendarPage(page, info, SeatCategory.RPStudent);
+
+  const pages = await puppet.CheckCalendarDays(page);
+  console.log(pages);
+  console.log(JSON.stringify(pages, null, 2));
 }
 
 /**
@@ -258,8 +269,7 @@ async function reserveTesting() {
  */
 async function collectProxyList() {
   const puppet = container.get(PuppetService);
-  for (let p of nordvpnProxyList) {
-    p = "https://de852.nordvpn.com:89";
+  for (const p of nordvpnProxyList) {
     const [b, page] = await puppet.getBrowser(undefined, p);
     try {
       await page.goto(loginPageUrl);
