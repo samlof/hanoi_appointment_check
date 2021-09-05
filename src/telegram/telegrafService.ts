@@ -21,11 +21,11 @@ export enum TelegrafType {
 
 // Global rate limit of 30 per second
 const rateLimiterOpts = {
-  points: 29, // 29 points
+  points: 20, // 20 points
   duration: 1, // Per second
 };
 const rateLimiterMaxQueueSize = {
-  maxQueueSize: 100,
+  maxQueueSize: 90,
 };
 const rateLimiters = {
   [TelegrafType.Default]: new RateLimiterQueue(
@@ -40,7 +40,7 @@ const rateLimiters = {
 
 // bot will not be able to send more than 20 messages per minute to the same group
 const logRateLimiter = new RateLimiterQueue(
-  new RateLimiterMemory({ duration: 60, points: 16 }),
+  new RateLimiterMemory({ duration: 60, points: 12 }),
   rateLimiterMaxQueueSize
 );
 // bot shouldn't send more than one message per second
