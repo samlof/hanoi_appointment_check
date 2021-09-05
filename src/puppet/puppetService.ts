@@ -89,8 +89,8 @@ export class PuppetService {
     await page.waitForTimeout(500);
 
     await Promise.all([
-      page.click(".submitbtn"),
       page.waitForNavigation({ timeout: waitForNavigationTimeout }),
+      page.click(".submitbtn"),
     ]);
     await page.waitForTimeout(500);
 
@@ -226,8 +226,8 @@ export class PuppetService {
 
     await page.waitForTimeout(500);
     await Promise.all([
-      await page.click(`input[type="submit"]`),
       page.waitForNavigation({ timeout: waitForNavigationTimeout }),
+      page.click(`input[type="submit"]`),
     ]);
     // Remove dialog accepter.
     page.off("dialog", diabloAccepter);
