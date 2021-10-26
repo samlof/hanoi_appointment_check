@@ -51,6 +51,7 @@ async function checkSeatsCalendar(
 
   logger.log("Running checkSeatsCalendar");
   let foundFreeDate: FoundDateStatus = FoundDateStatus.NotFound;
+  let freeDates: string[] = [];
 
   while (true) {
     logger.log("Opening browser");
@@ -91,9 +92,17 @@ async function checkSeatsCalendar(
         let logMsg = `Found ${avDates?.dates.length} available dates`;
 
         if (avDates?.dates.length > 0) {
-          const avDatesStr = avDates.dates.join(",");
+          const dates = avDates.dates;
+          const avDatesStr = dates.join(",");
           logMsg += ". " + avDatesStr;
           logger.log(logMsg);
+
+          if (!dates.every((d) => freeDates.includes(d))) {
+            freeDates = dates;
+            // There's a date we haven't seen before
+            // Set dates not found so next block sends a new message
+            foundFreeDate = FoundDateStatus.NotFound;
+          }
 
           // Check if found free date sent already
           if (foundFreeDate === FoundDateStatus.Found) {
@@ -122,6 +131,7 @@ async function checkSeatsCalendar(
             foundFreeDate = FoundDateStatus.PendingNotFound;
             continue;
           }
+          freeDates = [];
           foundFreeDate = FoundDateStatus.NotFound;
 
           // No seats available. Send a message telling that
