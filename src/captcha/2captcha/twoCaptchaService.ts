@@ -21,14 +21,14 @@ const badCaptchaFolder = "badcaptchas/";
 
 try {
   fs.mkdirSync(captchaFolder);
-} catch (error) {
+} catch (error: any) {
   if (error.code !== "EEXIST")
     // eslint-disable-next-line no-console
     console.error(`Error making dir ${captchaFolder}: ${error}`);
 }
 try {
   fs.mkdirSync(badCaptchaFolder);
-} catch (error) {
+} catch (error: any) {
   if (error.code !== "EEXIST")
     // eslint-disable-next-line no-console
     console.error(`Error making dir ${badCaptchaFolder}: ${error}`);

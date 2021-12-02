@@ -136,7 +136,7 @@ export class TelegrafService {
       try {
         await this.bot.telegram.sendMessage(id, msg);
         // Catch block to check if bot is blocked. Then remove from userIds list
-      } catch (error) {
+      } catch (error: any) {
         // Check if error isn't Error type
         if (!(error instanceof Error)) {
           this.sendMe(
