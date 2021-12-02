@@ -30,8 +30,8 @@ export class Logger {
     console.error(msg);
     this.sendTelegram(msg);
 
-    // Send error to my telegram as well
-    this.telegrafService.sendMe(msg);
+    // Send error to my telegram as well. Removed since console.error is already sent to me by pm2 service
+    // this.telegrafService.sendMe(msg);
   }
   public info(msg: string): void {
     msg = "INFO: " + msg;
