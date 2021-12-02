@@ -3,6 +3,7 @@ import { Browser, Page } from "puppeteer";
 import path from "path";
 import puppeteer from "puppeteer-extra";
 import Adblocker from "puppeteer-extra-plugin-adblocker";
+import RecaptchaPlugin from "puppeteer-extra-plugin-recaptcha";
 // @ts-ignore this doesn't have types
 import AnonymizeUaPlugin from "puppeteer-extra-plugin-anonymize-ua";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
@@ -17,10 +18,19 @@ import * as options from "../options";
 import { TelegrafService } from "../telegram/telegrafService";
 import { utils } from "../utils";
 import { getProxy, returnProxy } from "../proxy/proxyList";
+import { apiKey as twoCaptchaApiKey } from "../captcha/2captcha/twoCaptchaService";
 
 puppeteer.use(StealthPlugin());
 puppeteer.use(Adblocker({ blockTrackers: true }));
 puppeteer.use(AnonymizeUaPlugin());
+puppeteer.use(
+  RecaptchaPlugin({
+    provider: {
+      id: "2captcha",
+      token: twoCaptchaApiKey, // REPLACE THIS WITH YOUR OWN 2CAPTCHA API KEY ⚡
+    },
+  })
+);
 
 export const loginPageUrl =
   "https://online.vfsglobal.com/FinlandAppt/Account/RegisteredLogin?q=shSA0YnE4pLF9Xzwon/x/FXkgptUe6eKckueax3hilyMCJeF9rpsVy6pNcXQaW1lGwqZ09Q3CAT0LslshZBx5g==";
@@ -32,6 +42,7 @@ const waitForNavigationTimeout = 5 * 60 * 1000;
 const NordVpnUsername = process.env.NORDVPN_USERNAME;
 const NordVpnPassword = process.env.NORDVPN_PASSWORD;
 const UseProxy = !!process.env.USE_PROXY;
+const useLegacyCaptcha = false;
 
 @injectable()
 export class PuppetService {
@@ -59,17 +70,44 @@ export class PuppetService {
   ): Promise<string> {
     await page.goto(loginPageUrl);
 
-    const el = await page.$("#CaptchaImage");
-
-    const filename = path.join(captchaFolder, `loginCaptcha${Date.now()}.png`);
-    await el?.screenshot({ path: filename });
-
     let captcha: Captcha | undefined;
-    for (let i = 0; i < 5 && !captcha; i++) {
-      captcha = await this.captchaService.solveCaptcha(filename);
-    }
-    if (!captcha) {
-      throw new Error("Failed to solve captcha even after 5 tries");
+    let captchaFilename = "";
+    if (useLegacyCaptcha) {
+      const el = await page.$("#CaptchaImage");
+
+      captchaFilename = path.join(
+        captchaFolder,
+        `loginCaptcha${Date.now()}.png`
+      );
+      await el?.screenshot({ path: captchaFilename });
+
+      for (let i = 0; i < 5 && !captcha; i++) {
+        captcha = await this.captchaService.solveCaptcha(captchaFilename);
+      }
+      if (!captcha) {
+        throw new Error("Failed to solve captcha even after 5 tries");
+      }
+      await page.$eval(
+        "#CaptchaInputText",
+        // @ts-ignore because it's input
+        (el, captcha) => (el.value = captcha),
+        captcha.answer
+      );
+      await page.waitForTimeout(500);
+    } else {
+      let res = await page.solveRecaptchas();
+      let counter = 0;
+      while (res.solved.length < 1 && counter < 5) {
+        counter++;
+        await page.reload();
+        await page.waitForTimeout(1000);
+        res = await page.solveRecaptchas();
+      }
+      if (res.solved.length < 1) {
+        throw new Error(
+          `Failed to solve recaptcha even after retries. Err: ${res.error}`
+        );
+      }
     }
 
     // @ts-ignore because it's input
@@ -79,14 +117,6 @@ export class PuppetService {
       // @ts-ignore because it's input
       (el, password) => (el.value = password),
       password
-    );
-    await page.waitForTimeout(500);
-
-    await page.$eval(
-      "#CaptchaInputText",
-      // @ts-ignore because it's input
-      (el, captcha) => (el.value = captcha),
-      captcha.answer
     );
     await page.waitForTimeout(500);
 
@@ -105,7 +135,9 @@ export class PuppetService {
       const cookieString = cookies
         .map((x: any) => `${x.name}=${x.value}`)
         .join("; ");
-      this.captchaService.reportGood(captcha.captchaId);
+
+      if (useLegacyCaptcha && captcha)
+        this.captchaService.reportGood(captcha.captchaId);
       return cookieString;
     }
 
@@ -121,7 +153,9 @@ export class PuppetService {
     }
 
     if (errors?.includes("verification words are incorrect")) {
-      this.captchaService.reportBad(captcha.captchaId, filename);
+      if (useLegacyCaptcha && captcha)
+        this.captchaService.reportBad(captcha.captchaId, captchaFilename);
+      else this.logger.error("Captcha v2 failed");
 
       // Should try again since problem will fix itself
       await utils.sleep(1000);
@@ -155,13 +189,47 @@ export class PuppetService {
     ]);
     await page.waitForTimeout(1000);
 
-    const filename = path.join(
-      captchaFolder,
-      `registerCaptcha${Date.now()}.png`
-    );
-    const el = await page.$("#CaptchaImage");
-    await el?.screenshot({ path: filename });
-    const captchaPromise = this.captchaService.solveCaptcha(filename);
+    let captcha: Captcha | undefined;
+    let captchaFilename = "";
+    if (useLegacyCaptcha) {
+      captchaFilename = path.join(
+        captchaFolder,
+        `registerCaptcha${Date.now()}.png`
+      );
+      const el = await page.$("#CaptchaImage");
+      await el?.screenshot({ path: captchaFilename });
+
+      captcha = await this.captchaService.solveCaptcha(captchaFilename);
+      for (let i = 0; i < 5 && !captcha; i++) {
+        await utils.sleep(5000);
+        captcha = await this.captchaService.solveCaptcha(captchaFilename);
+      }
+      if (!captcha) {
+        throw new Error("Failed to get captcha");
+      }
+
+      await page.$eval(
+        "#CaptchaInputText",
+        // @ts-ignore because it's input
+        (el, captcha) => (el.value = captcha),
+        captcha.answer
+      );
+    } else {
+      let res = await page.solveRecaptchas();
+      let counter = 0;
+      while (res.solved.length < 1 && counter < 5) {
+        counter++;
+        await page.reload();
+        await page.waitForTimeout(1000);
+        res = await page.solveRecaptchas();
+      }
+
+      if (res.solved.length < 1) {
+        throw new Error(
+          `Failed to solve recaptcha even after retries. Err: ${res.error}`
+        );
+      }
+    }
 
     // await page.$eval(
     //   "#FirstName",
@@ -207,22 +275,6 @@ export class PuppetService {
     await page.waitForTimeout(500);
     await page.click("span.ui-button-icon-primary.ui-icon.ui-icon-closethick");
 
-    let captcha = await captchaPromise;
-    for (let i = 0; i < 5 && !captcha; i++) {
-      await utils.sleep(5000);
-      captcha = await this.captchaService.solveCaptcha(filename);
-    }
-    if (!captcha) {
-      throw new Error("Failed to get captcha");
-    }
-
-    await page.$eval(
-      "#CaptchaInputText",
-      // @ts-ignore because it's input
-      (el, captcha) => (el.value = captcha),
-      captcha.answer
-    );
-
     // Submit will open a dialog. Accept it
     const diabloAccepter = (dialog: any) => {
       dialog.accept();
@@ -250,7 +302,11 @@ export class PuppetService {
         // No error. Ignore
       }
       if (errors?.includes("Invalid reCAPTCHA request")) {
-        this.captchaService.reportBad(captcha.captchaId, filename);
+        if (useLegacyCaptcha && captcha) {
+          this.captchaService.reportBad(captcha.captchaId, captchaFilename);
+        } else {
+          this.logger.error("new account captcha v2 failed");
+        }
         await utils.sleep(1000);
         await this.makeNewAccount(page, accountInfo);
         return;
@@ -290,7 +346,8 @@ export class PuppetService {
     }
 
     // Login succeeded
-    this.captchaService.reportGood(captcha.captchaId);
+    if (useLegacyCaptcha && captcha)
+      this.captchaService.reportGood(captcha.captchaId);
   }
 
   private readonly loginHomePageUrl =
@@ -604,7 +661,21 @@ export class PuppetService {
     if (!proxy && UseProxy) {
       proxy = await getProxy();
     }
-    const browserArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
+    const browserArgs = [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-web-security",
+      "--disable-features=IsolateOrigins,site-per-process",
+      "--allow-running-insecure-content",
+      "--disable-blink-features=AutomationControlled",
+      "--mute-audio",
+      "--no-zygote",
+      "--no-xshm",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--ignore-certificate-errors",
+      "--disable-gpu-sandbox",
+    ];
     this.proxyUrl = proxy;
     if (this.proxyUrl) {
       this.logger.log("Activating proxy");

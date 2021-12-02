@@ -8,7 +8,7 @@ import { Logger } from "../../logger";
 
 const inUrl = "https://2captcha.com/in.php";
 const getUrl = "https://2captcha.com/res.php";
-const apiKey = process.env.TWOCAPTCHA_APIKEY;
+export const apiKey = process.env.TWOCAPTCHA_APIKEY;
 if (!apiKey) {
   throw Error(
     utils.getTimestamp() +
