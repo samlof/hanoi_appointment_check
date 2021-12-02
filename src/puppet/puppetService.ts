@@ -1,5 +1,6 @@
 import { injectable } from "inversify";
 import { Browser, Page } from "puppeteer";
+import path from "path";
 import puppeteer from "puppeteer-extra";
 import Adblocker from "puppeteer-extra-plugin-adblocker";
 // @ts-ignore this doesn't have types
@@ -59,7 +60,8 @@ export class PuppetService {
     await page.goto(loginPageUrl);
 
     const el = await page.$("#CaptchaImage");
-    const filename = `${captchaFolder}/loginCaptcha${Date.now()}.png`;
+
+    const filename = path.join(captchaFolder, `loginCaptcha${Date.now()}.png`);
     await el?.screenshot({ path: filename });
 
     let captcha: Captcha | undefined;
@@ -153,7 +155,10 @@ export class PuppetService {
     ]);
     await page.waitForTimeout(1000);
 
-    const filename = `${captchaFolder}/registerCaptcha${Date.now()}.png`;
+    const filename = path.join(
+      captchaFolder,
+      `registerCaptcha${Date.now()}.png`
+    );
     const el = await page.$("#CaptchaImage");
     await el?.screenshot({ path: filename });
     const captchaPromise = this.captchaService.solveCaptcha(filename);

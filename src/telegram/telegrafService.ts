@@ -126,6 +126,9 @@ export class TelegrafService {
   }
 
   public async sendBroadcast(msg: string): Promise<void> {
+    // Broadcasting disabled for now. No way to delete banned users for it's list currently. One day can code that
+    return;
+
     if (telegramOff) return;
 
     for (const id of this.broadcastFileService.readIds()) {
@@ -145,10 +148,13 @@ export class TelegrafService {
         }
 
         const searchStr = error.message + error.stack;
-        // Remove from list if was blocked
-        if (searchStr.includes("bot was blocked by the user"))
+        // Remove from list if was blocked or user deactivated
+        if (
+          searchStr.includes("bot was blocked by the user") ||
+          searchStr.includes("user is deactivated")
+        ) {
           this.broadcastFileService.removeId(id);
-        else {
+        } else {
           this.sendMe(
             `Sending broadcast msg ${msg} to id ${id} got error not Error: ${error.message} at: ${error.stack}`
           );
