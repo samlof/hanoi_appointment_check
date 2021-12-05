@@ -105,7 +105,7 @@ export class PuppetService {
       }
       if (res.solved.length < 1) {
         throw new Error(
-          `Failed to solve recaptcha even after retries. Err: ${res.error}`
+          `Failed to solve recaptcha even after retries. Filtered: ${res.filtered}. Err: ${res.error}`
         );
       }
     }
@@ -226,7 +226,7 @@ export class PuppetService {
 
       if (res.solved.length < 1) {
         throw new Error(
-          `Failed to solve recaptcha even after retries. Err: ${res.error}`
+          `Failed to solve recaptcha even after retries. Filtered: ${res.filtered}. Err: ${res.error}`
         );
       }
     }
@@ -666,6 +666,7 @@ export class PuppetService {
       "--disable-setuid-sandbox",
       "--disable-web-security",
       "--disable-features=IsolateOrigins,site-per-process",
+      "--flag-switches-begin --disable-site-isolation-trials --flag-switches-end",
       "--allow-running-insecure-content",
       "--disable-blink-features=AutomationControlled",
       "--mute-audio",
@@ -692,8 +693,20 @@ export class PuppetService {
       userDataDir: datadir,
     });
     const page = await browser.newPage();
+
     // Adjustments particular to this page to ensure we hit desktop breakpoint.
-    await page.setViewport({ width: 1000, height: 600, deviceScaleFactor: 1 });
+    //Randomize viewport size
+    await page.setViewport({
+      width: 1920 + Math.floor(Math.random() * 100),
+      height: 1080 + Math.floor(Math.random() * 100),
+      deviceScaleFactor: 1,
+      hasTouch: false,
+      isLandscape: false,
+      isMobile: false,
+    });
+
+    await page.setJavaScriptEnabled(true);
+    await page.setDefaultNavigationTimeout(0);
 
     // Authenticate proxy
     if (this.proxyUrl) {

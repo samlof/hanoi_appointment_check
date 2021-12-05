@@ -29,10 +29,10 @@ async function main() {
   logger.log("Running main v" + version);
 
   checkSeatsCalendar(SeatCategory.RPFamily, "FAMILY");
-  checkSeatsCalendar(SeatCategory.RPStudent, "STUDENT");
+  // checkSeatsCalendar(SeatCategory.RPStudent, "STUDENT");
   checkSeatsCalendar(SeatCategory.RPWork, "WORK");
-  checkSeatsCalendar(SeatCategory.Visa, "SCHENGEN VISA");
-  checkSeatsCalendar(SeatCategory.Legalization, "LEGALIZATION");
+  // checkSeatsCalendar(SeatCategory.Visa, "SCHENGEN VISA");
+  // checkSeatsCalendar(SeatCategory.Legalization, "LEGALIZATION");
 }
 enum FoundDateStatus {
   NotFound,
